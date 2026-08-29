@@ -1,11 +1,34 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SkillTree from '../components/react/SkillTree.tsx';
+import ThemeToggle from '../components/react/ThemeToggle.tsx';
+import { getCollection } from 'astro:content';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+const skills = (await getCollection('skills'))
+  .sort((a, b) => a.data.order - b.data.order)
+  .map((s) => ({
+    id: s.id,
+    title: s.data.title,
+    category: s.data.category,
+    order: s.data.order,
+    dependsOn: s.data.dependsOn,
+    position: s.data.position,
+  }));
 ---
 
-<Layout>
-	<Welcome />
-</Layout>
+<BaseLayout title="Backend Roadmap">
+  <main class="flex h-screen flex-col">
+    <header class="flex items-center justify-between border-b border-zinc-200 px-6 py-4 dark:border-zinc-800">
+      <div>
+        <h1 class="text-xl font-bold">Backend Roadmap</h1>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400">
+          Learn the fundamentals, then code them in Go, Java, TypeScript, or Python.
+        </p>
+      </div>
+      <ThemeToggle client:load />
+    </header>
+    <div class="relative min-h-0 flex-1">
+      <SkillTree client:load skills={skills} />
+    </div>
+  </main>
+</BaseLayout>
