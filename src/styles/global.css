@@ -17,3 +17,15 @@ body {
   width: 100%;
   height: 100%;
 }
+
+.skill-edge-dots .react-flow__edge-path {
+  stroke-dasharray: 0.5 10;
+  stroke-linecap: round;
+  animation: skill-edge-dash 1s linear infinite;
+}
+
+@keyframes skill-edge-dash {
+  to {
+    stroke-dashoffset: -10.5;
+  }
+}
