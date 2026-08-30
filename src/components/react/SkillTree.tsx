@@ -1,6 +1,7 @@
 import { useCallback, useMemo, type MouseEvent } from 'react';
 import {
   ReactFlow,
+  ReactFlowProvider,
   Background,
   BackgroundVariant,
   Controls,
@@ -8,6 +9,7 @@ import {
   Handle,
   Position,
   MarkerType,
+  useReactFlow,
   type Edge,
   type Node,
   type NodeProps,
@@ -72,6 +74,7 @@ interface SkillTreeProps {
 function SkillTreeContent({ skills }: SkillTreeProps) {
   const { getStatus, clearProgress } = useProgressContext();
   const theme = useTheme();
+  const { setEdges } = useReactFlow();
 
   const deriveStatus = useCallback(
     (skill: SkillSummary): ProgressStatus => getStatus(skill.id),
@@ -107,7 +110,7 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
           source: dep,
           target: s.id,
           markerEnd: { type: MarkerType.ArrowClosed },
-          style: { stroke: '#71717a', strokeWidth: 2 },
+          style: { stroke: '#71717a', strokeWidth: 3 },
         });
       }),
     );
@@ -119,13 +122,31 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
     window.location.href = `/skill/${node.id}`;
   }, []);
 
+  const onNodeMouseEnter = useCallback(
+    (_: MouseEvent, node: Node) => {
+      setEdges((eds) =>
+        eds.map((e) => ({
+          ...e,
+          className: e.source === node.id || e.target === node.id ? 'skill-edge-dots' : undefined,
+        })),
+      );
+    },
+    [setEdges],
+  );
+
+  const onNodeMouseLeave = useCallback(() => {
+    setEdges((eds) => eds.map((e) => ({ ...e, className: undefined })));
+  }, [setEdges]);
+
   return (
     <div className="h-full w-full">
        <ReactFlow
-        nodes={nodes}
-        edges={edges}
+        defaultNodes={nodes}
+        defaultEdges={edges}
         nodeTypes={nodeTypes}
         onNodeClick={onNodeClick}
+        onNodeMouseEnter={onNodeMouseEnter}
+        onNodeMouseLeave={onNodeMouseLeave}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.2}
@@ -180,7 +201,9 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
 export default function SkillTree({ skills }: SkillTreeProps) {
   return (
     <ProgressProvider>
-      <SkillTreeContent skills={skills} />
+      <ReactFlowProvider>
+        <SkillTreeContent skills={skills} />
+      </ReactFlowProvider>
     </ProgressProvider>
   );
 }
