@@ -3,6 +3,7 @@ title: CI/CD Pipelines
 category: Quality
 order: 35
 dependsOn: [github-workflow, testing-cicd]
+simulation: git
 starterCode:
   go: |
     // CI: every push runs build + tests.
