@@ -1,0 +1,269 @@
+---
+interface Props {
+  storageKey?: string;
+  defaultPct?: number;
+  minPct?: number;
+  maxPct?: number;
+}
+
+const { storageKey = "backend-roadmap:split:skill", defaultPct = 50, minPct = 25, maxPct = 75 } = Astro.props;
+---
+
+<div
+  data-split-root
+  data-storage-key={storageKey}
+  data-default-pct={String(defaultPct)}
+  data-min-pct={String(minPct)}
+  data-max-pct={String(maxPct)}
+  class="flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row relative"
+>
+  <div data-split-left class="min-h-0 min-w-0 overflow-hidden" style={`flex-basis:${defaultPct}%;`}>
+    <slot name="left" />
+  </div>
+
+  <div
+    data-split-handle
+    role="separator"
+    aria-orientation="vertical"
+    aria-valuemin={String(minPct)}
+    aria-valuemax={String(maxPct)}
+    aria-valuenow={String(defaultPct)}
+    tabindex="0"
+    title="Drag to resize • Double-click to reset • Arrow keys to nudge"
+    class="group relative hidden shrink-0 select-none items-center justify-center bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-0 dark:bg-zinc-800 lg:flex lg:w-2 lg:cursor-col-resize hover:bg-zinc-200 dark:hover:bg-zinc-700"
+  >
+    <div class="h-full w-px bg-zinc-200 group-hover:bg-sky-500/30 dark:bg-zinc-700 transition-colors"></div>
+    <div class="pointer-events-none absolute inset-0 flex items-center justify-center opacity-60 group-hover:opacity-100">
+      <div class="flex flex-col gap-0.5 rounded-full bg-zinc-300 px-0.5 py-1 dark:bg-zinc-600">
+        <span class="block h-1 w-1 rounded-full bg-zinc-500 dark:bg-zinc-300"></span>
+        <span class="block h-1 w-1 rounded-full bg-zinc-500 dark:bg-zinc-300"></span>
+        <span class="block h-1 w-1 rounded-full bg-zinc-500 dark:bg-zinc-300"></span>
+      </div>
+    </div>
+    <div class="absolute inset-y-0 -left-1 -right-1" aria-hidden="true"></div>
+  </div>
+
+  <div data-split-right class="min-h-0 min-w-0 overflow-hidden relative" style={`flex-basis:${100 - defaultPct}%;`}>
+    <slot name="right" />
+    <!-- Floating expand button — visible only when docs are collapsed -->
+    <!-- <button -->
+    <!--   data-split-expand -->
+    <!--   type="button" -->
+    <!--   class="hidden absolute left-3 top-3 z-20 items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 shadow-md hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500" -->
+    <!--   aria-label="Show documentation" -->
+    <!--   title="Show documentation" -->
+    <!-- > -->
+    <!--   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" class="h-3.5 w-3.5" aria-hidden="true"><path d="M2 8s2.5-4 6-4 6 4 6 4-2.5 4-6 4-6-4-6-4z"/><circle cx="8" cy="8" r="1.8"/><path d="M8 5v1.5"/><path d="M8 9.5V11"/></svg> -->
+    <!--   Show docs -->
+    <!-- </button> -->
+  </div>
+</div>
+
+<script is:inline define:vars={{ storageKey, defaultPct, minPct, maxPct }}>
+  (function () {
+    const container = document.querySelector('[data-split-root][data-storage-key="' + storageKey + '"]');
+    if (!container) return;
+    const left = container.querySelector('[data-split-left]');
+    const right = container.querySelector('[data-split-right]');
+    const handle = container.querySelector('[data-split-handle]');
+    const expandBtn = container.querySelector('[data-split-expand]');
+    if (!left || !right || !handle) return;
+
+    const key = container.getAttribute('data-storage-key') || storageKey;
+    const collapsedKey = key + ':collapsed';
+    const defPct = Number(container.getAttribute('data-default-pct') || defaultPct);
+    const min = Number(container.getAttribute('data-min-pct') || minPct);
+    const max = Number(container.getAttribute('data-max-pct') || maxPct);
+
+    function clamp(v) { return Math.min(max, Math.max(min, v)); }
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw != null) {
+          const n = Number(JSON.parse(raw));
+          if (Number.isFinite(n)) return clamp(n);
+          const m = Number(raw);
+          if (Number.isFinite(m)) return clamp(m);
+        }
+      } catch {}
+      return defPct;
+    }
+
+    function save(v) {
+      try { localStorage.setItem(key, JSON.stringify(Math.round(v))); } catch {}
+    }
+
+    function loadCollapsed() {
+      try {
+        const raw = localStorage.getItem(collapsedKey);
+        if (raw != null) return JSON.parse(raw) === true;
+      } catch {}
+      return false;
+    }
+
+    function saveCollapsed(v) {
+      try { localStorage.setItem(collapsedKey, JSON.stringify(v)); } catch {}
+      // sync TopBar button
+      window.dispatchEvent(new CustomEvent('docs-collapsed-sync', { detail: { collapsed: v } }));
+    }
+
+    let pct = load();
+    let collapsed = loadCollapsed();
+
+    function syncTopBar() {
+      window.dispatchEvent(new CustomEvent('docs-collapsed-sync', { detail: { collapsed: collapsed } }));
+    }
+
+    function apply() {
+      const isMobile = window.matchMedia('(max-width: 1023px)').matches;
+      if (collapsed) {
+        left.style.display = 'none';
+        left.setAttribute('aria-hidden', 'true');
+        handle.style.display = 'none';
+        handle.setAttribute('aria-hidden', 'true');
+        right.style.flexBasis = '100%';
+        right.style.display = '';
+        if (expandBtn) {
+          expandBtn.style.display = 'inline-flex';
+          expandBtn.classList.remove('hidden');
+          expandBtn.classList.add('flex');
+        }
+        // still dispatch resize for editors
+        window.dispatchEvent(new Event('resize'));
+        return;
+      }
+
+      // not collapsed
+      left.style.display = '';
+      left.removeAttribute('aria-hidden');
+      if (expandBtn) {
+        expandBtn.style.display = 'none';
+        expandBtn.classList.add('hidden');
+        expandBtn.classList.remove('flex');
+      }
+
+      if (isMobile) {
+        left.style.flexBasis = '';
+        right.style.flexBasis = '';
+        handle.style.display = 'none';
+        handle.setAttribute('aria-hidden', 'true');
+        return;
+      }
+      handle.style.display = '';
+      handle.removeAttribute('aria-hidden');
+      left.style.flexBasis = pct + '%';
+      right.style.flexBasis = (100 - pct) + '%';
+      handle.setAttribute('aria-valuenow', String(Math.round(pct)));
+      window.dispatchEvent(new Event('resize'));
+    }
+
+    // initial sync
+    apply();
+    // notify TopBar of initial collapsed state after a tick (TopBar may not have listener yet)
+    setTimeout(syncTopBar, 0);
+    setTimeout(syncTopBar, 200);
+
+    const mql = window.matchMedia('(max-width: 1023px)');
+    mql.addEventListener('change', apply);
+    window.addEventListener('resize', function() {
+      // don't call apply on every resize when collapsed? still need to handle mobile switch
+      if (!collapsed) apply();
+    });
+
+    // listen for toggle from TopBar
+    window.addEventListener('docs-toggle', function (e) {
+      const detail = e.detail || {};
+      const next = typeof detail.collapsed === 'boolean' ? detail.collapsed : !collapsed;
+      collapsed = next;
+      saveCollapsed(collapsed);
+      apply();
+    });
+
+    // expand button
+    if (expandBtn) {
+      expandBtn.addEventListener('click', function () {
+        collapsed = false;
+        saveCollapsed(collapsed);
+        apply();
+      });
+    }
+
+    let dragging = false;
+
+    function onMove(e) {
+      if (!dragging) return;
+      if (collapsed) return;
+      const rect = container.getBoundingClientRect();
+      const next = ((e.clientX - rect.left) / rect.width) * 100;
+      pct = clamp(next);
+      requestAnimationFrame(apply);
+    }
+
+    function onUp() {
+      if (!dragging) return;
+      dragging = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      container.classList.remove('split-dragging');
+      save(pct);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    }
+
+    handle.addEventListener('pointerdown', (e) => {
+      if (collapsed) return;
+      if (window.matchMedia('(max-width: 1023px)').matches) return;
+      e.preventDefault();
+      dragging = true;
+      container.classList.add('split-dragging');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      if (handle.setPointerCapture) {
+        try { handle.setPointerCapture(e.pointerId); } catch {}
+      }
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    });
+
+    handle.addEventListener('dblclick', () => {
+      if (collapsed) return;
+      pct = defPct;
+      apply();
+      save(pct);
+    });
+
+    handle.addEventListener('keydown', (e) => {
+      if (collapsed) return;
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        pct = clamp(pct - 5);
+        apply(); save(pct);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        pct = clamp(pct + 5);
+        apply(); save(pct);
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        pct = min; apply(); save(pct);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        pct = max; apply(); save(pct);
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        // allow Enter to toggle collapse as alternative
+        // not needed
+      }
+    });
+
+    setTimeout(apply, 100);
+  })();
+</script>
+
+<style>
+  .split-dragging {
+    cursor: col-resize;
+  }
+  .split-dragging * {
+    user-select: none !important;
+  }
+</style>
