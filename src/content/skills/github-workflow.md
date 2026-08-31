@@ -3,6 +3,7 @@ title: GitHub Workflow & PRs
 category: Tooling
 order: 34
 dependsOn: [git-branching, git-remotes]
+simulation: git
 starterCode:
   go: |
     // Create a PR on github.com, not in the terminal.
