@@ -3,6 +3,7 @@ title: Git & GitHub
 category: Tooling
 order: 30
 dependsOn: []
+simulation: git
 starterCode:
   go: |
     // Nothing to compile here — these are the commands you'll run daily:
