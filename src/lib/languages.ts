@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export type SupportedLanguage = 'go' | 'java' | 'typescript' | 'python';
 
@@ -28,12 +28,21 @@ export function loadLanguage(): SupportedLanguage {
 }
 
 export function usePersistedLanguage(): [SupportedLanguage, (lang: SupportedLanguage) => void] {
-  const [language, setLanguage] = useState<SupportedLanguage>(() => loadLanguage());
-  const set = (lang: SupportedLanguage) => {
+  const [language, setLanguage] = useState<SupportedLanguage>(DEFAULT_LANGUAGE);
+
+  useEffect(() => {
+    const saved = loadLanguage();
+    if (saved !== language) {
+      setLanguage(saved);
+    }
+  }, []);
+
+  const set = useCallback((lang: SupportedLanguage) => {
     setLanguage(lang);
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(LANGUAGE_KEY, lang);
     }
-  };
+  }, []);
+
   return [language, set];
 }
