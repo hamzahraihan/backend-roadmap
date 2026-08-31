@@ -3,6 +3,7 @@ title: Git Fundamentals
 category: Tooling
 order: 31
 dependsOn: [version-control]
+simulation: git
 starterCode:
   go: |
     // git init
