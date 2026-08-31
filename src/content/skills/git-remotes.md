@@ -3,6 +3,7 @@ title: Remotes & Collaboration
 category: Tooling
 order: 33
 dependsOn: [git-fundamentals]
+simulation: git
 starterCode:
   go: |
     // git remote add origin https://github.com/you/repo.git
