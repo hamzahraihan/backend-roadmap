@@ -1,0 +1,18 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import GitSimulation from '../components/react/GitSimulation.tsx';
+import TopBar from '../components/TopBar.astro';
+---
+
+<BaseLayout title="Git Playground — Backend Roadmap">
+  <main class="flex h-screen flex-col">
+    <TopBar variant="playground" />
+    <div class="flex min-h-0 flex-1 flex-col">
+      <div class="flex min-h-0 flex-1">
+        <div class="min-h-0 flex-1">
+          <GitSimulation client:load skillId="free" />
+        </div>
+      </div>
+    </div>
+  </main>
+</BaseLayout>
