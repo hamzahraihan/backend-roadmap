@@ -1,6 +1,6 @@
 import { useTheme, toggleTheme } from '../../lib/theme';
 
-export default function ThemeToggle() {
+export default function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const theme = useTheme();
   const isDark = theme === 'dark';
 
@@ -10,7 +10,7 @@ export default function ThemeToggle() {
       onClick={toggleTheme}
       aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
       title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
-      className="flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-zinc-100 text-zinc-700 transition hover:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+      className={`flex items-center justify-center rounded-md border transition ${compact ? 'h-7 w-7 border-transparent bg-transparent text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800' : 'h-9 w-9 border-zinc-200 bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700'}`}
     >
       {isDark ? (
         <svg
