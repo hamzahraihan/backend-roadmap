@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SkillTree from '../components/react/SkillTree.tsx';
-import ThemeToggle from '../components/react/ThemeToggle.tsx';
+import TopBar from '../components/TopBar.astro';
 import { getCollection } from 'astro:content';
 
 const skills = (await getCollection('skills'))
@@ -18,15 +18,7 @@ const skills = (await getCollection('skills'))
 
 <BaseLayout title="Backend Roadmap">
   <main class="flex h-screen flex-col">
-    <header class="flex items-center justify-between border-b border-zinc-200 px-6 py-4 dark:border-zinc-800">
-      <div>
-        <h1 class="text-xl font-bold">Backend Roadmap</h1>
-        <p class="text-sm text-zinc-500 dark:text-zinc-400">
-          Learn the fundamentals, then code them in Go, Java, TypeScript, or Python.
-        </p>
-      </div>
-      <ThemeToggle client:load />
-    </header>
+    <TopBar variant="home" />
     <div class="relative min-h-0 flex-1">
       <SkillTree client:load skills={skills} />
     </div>
