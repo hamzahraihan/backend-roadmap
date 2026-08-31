@@ -29,3 +29,12 @@ body {
     stroke-dashoffset: -10.5;
   }
 }
+
+.split-dragging {
+  cursor: col-resize;
+}
+
+.split-dragging * {
+  user-select: none !important;
+  cursor: col-resize !important;
+}
