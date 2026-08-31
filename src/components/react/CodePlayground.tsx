@@ -1,7 +1,8 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Editor } from '@monaco-editor/react';
 import { LANGUAGES, usePersistedLanguage, type SupportedLanguage } from '../../lib/languages';
 import { runCode } from '../../lib/execute';
+import ResizableSplit from './ResizableSplit';
 import { ProgressProvider, useProgressContext } from './ProgressProvider';
 import { useTheme } from '../../lib/theme';
 
@@ -28,6 +29,10 @@ function CodePlaygroundContent({ skillId, starterCode }: CodePlaygroundProps) {
   const theme = useTheme();
 
   const status = getStatus(skillId);
+
+  useEffect(() => {
+    setCode(starterCode[language] ?? '');
+  }, [language, skillId, starterCode]);
 
   const switchLanguage = useCallback(
     (lang: SupportedLanguage) => {
@@ -92,45 +97,57 @@ function CodePlaygroundContent({ skillId, starterCode }: CodePlaygroundProps) {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1">
-        <Editor
-          height="100%"
-          language={editorLanguage}
-          value={code}
-          onChange={(v) => setCode(v ?? '')}
-          theme={theme === 'dark' ? 'vs-dark' : 'light'}
-          options={{
-            minimap: { enabled: false },
-            fontSize: 13,
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-          }}
+      <div className="flex min-h-0 flex-1">
+        <ResizableSplit
+          orientation="vertical"
+          storageKey="backend-roadmap:split:code-inner"
+          defaultPct={55}
+          minPct={25}
+          maxPct={75}
+          left={
+            <div className="min-h-0 h-full">
+              <Editor
+                height="100%"
+                language={editorLanguage}
+                value={code}
+                onChange={(v) => setCode(v ?? '')}
+                theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 13,
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                }}
+              />
+            </div>
+          }
+          right={
+            <div className="flex min-h-0 h-full flex-col border-t border-zinc-800 lg:border-t">
+              <div className="flex items-center justify-between px-4 py-1.5">
+                <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">Output</span>
+                <button
+                  onClick={() => setStatus(skillId, status === 'completed' ? 'in-progress' : 'completed')}
+                  className={`rounded px-3 py-1 text-xs font-medium transition ${
+                    status === 'completed'
+                      ? 'bg-emerald-600 text-white hover:bg-emerald-500'
+                      : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                  }`}
+                >
+                  {status === 'completed' ? '✓ Completed' : 'Mark complete'}
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto bg-zinc-100 px-4 py-2 font-mono text-xs dark:bg-zinc-950">
+                {output && <pre className="whitespace-pre-wrap text-emerald-300">{output}</pre>}
+                {error && <pre className="whitespace-pre-wrap text-red-400">{error}</pre>}
+                {!output && !error && (
+                  <span className="text-zinc-600">
+                    Press Run to execute your code via the Wandbox sandbox.
+                  </span>
+                )}
+              </div>
+            </div>
+          }
         />
-      </div>
-
-      <div className="flex min-h-0 flex-1 flex-col border-t border-zinc-800">
-        <div className="flex items-center justify-between px-4 py-1.5">
-          <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">Output</span>
-          <button
-            onClick={() => setStatus(skillId, status === 'completed' ? 'in-progress' : 'completed')}
-            className={`rounded px-3 py-1 text-xs font-medium transition ${
-              status === 'completed'
-                ? 'bg-emerald-600 text-white hover:bg-emerald-500'
-                : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-            }`}
-          >
-            {status === 'completed' ? '✓ Completed' : 'Mark complete'}
-          </button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto bg-zinc-100 px-4 py-2 font-mono text-xs dark:bg-zinc-950">
-          {output && <pre className="whitespace-pre-wrap text-emerald-300">{output}</pre>}
-          {error && <pre className="whitespace-pre-wrap text-red-400">{error}</pre>}
-          {!output && !error && (
-            <span className="text-zinc-600">
-              Press Run to execute your code via the Wandbox sandbox.
-            </span>
-          )}
-        </div>
       </div>
     </div>
   );
