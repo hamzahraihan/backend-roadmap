@@ -1,0 +1,214 @@
+---
+import ThemeToggle from './react/ThemeToggle.tsx';
+import ActivitiesSidebar from './react/ActivitiesSidebar.tsx';
+import { getCollection } from 'astro:content';
+
+interface Props {
+  variant?: 'home' | 'skill' | 'playground';
+  title?: string;
+  category?: string;
+}
+
+const { variant = 'home', title, category } = Astro.props;
+
+const isHome = variant === 'home';
+const isSkill = variant === 'skill';
+const isPlayground = variant === 'playground';
+
+const allSkills = (await getCollection('skills'))
+  .sort((a, b) => a.data.order - b.data.order)
+  .map((s) => ({
+    id: s.id,
+    title: s.data.title,
+    category: s.data.category,
+    order: s.data.order,
+    dependsOn: s.data.dependsOn,
+  }));
+---
+
+<header
+  data-topbar
+  class="sticky top-0 z-40 flex h-12 items-center justify-between border-b border-zinc-200 bg-white px-4 text-zinc-900 select-none dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+  role="banner"
+>
+  <!-- Left: Activities + App / Breadcrumb -->
+  <nav aria-label="Primary" class="flex min-w-0 items-center gap-3">
+    <button
+      type="button"
+      data-activities-trigger
+      aria-expanded="false"
+      aria-controls="activities-drawer"
+      aria-haspopup="dialog"
+      aria-label="Open activities"
+      class="hidden sm:flex items-center gap-2.5 rounded-lg px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+    >
+      <span class="grid h-[18px] w-[18px] grid-cols-3 gap-0.5" aria-hidden="true">
+        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-zinc-700 dark:bg-zinc-300"></span>
+        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-zinc-700 dark:bg-zinc-300"></span>
+        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-zinc-700 dark:bg-zinc-300"></span>
+        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-zinc-700 dark:bg-zinc-300"></span>
+        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-zinc-700 dark:bg-zinc-300"></span>
+        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-zinc-700 dark:bg-zinc-300"></span>
+        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-zinc-700 dark:bg-zinc-300"></span>
+        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-zinc-700 dark:bg-zinc-300"></span>
+        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-zinc-700 dark:bg-zinc-300"></span>
+      </span>
+      <span class="hidden md:inline text-sm font-semibold tracking-tight">Activities</span>
+    </button>
+
+    <button
+      type="button"
+      data-activities-trigger
+      aria-expanded="false"
+      aria-controls="activities-drawer"
+      aria-haspopup="dialog"
+      aria-label="Open activities"
+      class="sm:hidden flex h-8 w-8 items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+    >
+      <svg viewBox="0 0 16 16" class="h-4 w-4 fill-zinc-700 dark:fill-zinc-300" aria-hidden="true"><rect x="1" y="1" width="4" height="4" rx="1"/><rect x="6" y="1" width="4" height="4" rx="1"/><rect x="11" y="1" width="4" height="4" rx="1"/><rect x="1" y="6" width="4" height="4" rx="1"/><rect x="6" y="6" width="4" height="4" rx="1"/><rect x="11" y="6" width="4" height="4" rx="1"/><rect x="1" y="11" width="4" height="4" rx="1"/><rect x="6" y="11" width="4" height="4" rx="1"/><rect x="11" y="11" width="4" height="4" rx="1"/></svg>
+    </button>
+
+    <span class="hidden sm:block h-5 w-px bg-zinc-200 dark:bg-zinc-800" aria-hidden="true"></span>
+
+    <div class="flex min-w-0 items-center gap-2">
+      <a href="/" class="truncate text-sm font-semibold hover:text-sky-600 dark:hover:text-sky-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg px-1.5 py-0.5">
+        Backend Roadmap
+      </a>
+      {isSkill && title && (
+        <>
+          <span class="text-zinc-400 dark:text-zinc-600" aria-hidden="true">›</span>
+          <span class="hidden md:inline truncate text-sm text-zinc-600 dark:text-zinc-300 max-w-[28vw] font-medium">{title}</span>
+          <span class="md:hidden truncate text-sm text-zinc-600 dark:text-zinc-300 max-w-[38vw] font-medium">{title}</span>
+        </>
+      )}
+      {isPlayground && (
+        <>
+          <span class="text-zinc-400 dark:text-zinc-600" aria-hidden="true">›</span>
+          <span class="text-sm font-medium text-zinc-600 dark:text-zinc-300">Git Playground</span>
+        </>
+      )}
+    </div>
+
+    {isSkill && category && (
+        <span class="hidden lg:inline rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+          {category}
+        </span>
+      )}
+      {isSkill && (
+        <button
+          data-docs-toggle
+          aria-pressed="false"
+          aria-label="Hide documentation"
+          class="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+          title="Hide/show documentation"
+        >
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" class="h-3.5 w-3.5" aria-hidden="true"><path d="M2 8s2.5-4 6-4 6 4 6 4-2.5 4-6 4-6-4-6-4z"/><circle cx="8" cy="8" r="1.8"/></svg>
+          <span data-docs-toggle-label>Hide docs</span>
+        </button>
+      )}
+    </nav>
+
+  <!-- Right: Actions + Power (ThemeToggle) -->
+  <div class="flex items-center gap-1.5" aria-label="System actions">
+    {isHome && (
+      <a href="/playground" class="hidden md:inline-flex items-center gap-1.5 rounded-full bg-zinc-900 px-3.5 py-1.5 text-xs font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" class="h-3.5 w-3.5" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M4 7l3 2-3 2"/><path d="M8 11h4"/></svg>
+        Git Playground
+      </a>
+    )}
+    {isSkill && (
+      <a href="/" class="hidden sm:inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
+        ← Roadmap
+      </a>
+    )}
+    {isPlayground && (
+      <a href="/" class="hidden sm:inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
+        ← Roadmap
+      </a>
+    )}
+
+    <span class="hidden sm:block h-5 w-px bg-zinc-200 dark:bg-zinc-800 mx-1" aria-hidden="true"></span>
+
+    <span class="flex items-center">
+      <ThemeToggle client:load compact />
+    </span>
+  </div>
+</header>
+
+<ActivitiesSidebar client:load skills={allSkills} />
+
+<script is:inline>
+  (function () {
+    const docsBtn = document.querySelector('[data-docs-toggle]');
+    const activitiesTriggers = document.querySelectorAll('[data-activities-trigger]');
+
+    // Docs toggle (existing)
+    if (docsBtn) {
+      const label = docsBtn.querySelector('[data-docs-toggle-label]');
+      const collapsedKey = 'backend-roadmap:split:skill:collapsed';
+      function setDocsBtn(collapsed) {
+        docsBtn.setAttribute('aria-pressed', String(collapsed));
+        docsBtn.setAttribute('aria-label', collapsed ? 'Show documentation' : 'Hide documentation');
+        docsBtn.title = collapsed ? 'Show documentation' : 'Hide documentation';
+        if (label) label.textContent = collapsed ? 'Show docs' : 'Hide docs';
+      }
+      try {
+        const raw = localStorage.getItem(collapsedKey);
+        if (raw != null) {
+          const c = JSON.parse(raw);
+          if (typeof c === 'boolean') setDocsBtn(c);
+        }
+      } catch {}
+      window.addEventListener('docs-collapsed-sync', function (e) {
+        const c = e.detail && typeof e.detail.collapsed === 'boolean' ? e.detail.collapsed : false;
+        setDocsBtn(c);
+      });
+      docsBtn.addEventListener('click', function () {
+        const collapsed = docsBtn.getAttribute('aria-pressed') === 'true';
+        const next = !collapsed;
+        setDocsBtn(next);
+        try { localStorage.setItem(collapsedKey, JSON.stringify(next)); } catch {}
+        window.dispatchEvent(new CustomEvent('docs-toggle', { detail: { collapsed: next } }));
+      });
+    }
+
+    // Activities toggle
+    function dispatchActivitiesToggle() {
+      const isOpen = document.querySelector('[data-activities-drawer]')?.getAttribute('aria-hidden') === 'false';
+      // The sidebar listens for activities:toggle and flips if no detail
+      window.dispatchEvent(new CustomEvent('activities:toggle'));
+      // also sync aria-expanded on triggers
+      const nextOpen = !isOpen;
+      activitiesTriggers.forEach((el) => el.setAttribute('aria-expanded', String(nextOpen)));
+    }
+
+    activitiesTriggers.forEach((btn) => {
+      btn.addEventListener('click', dispatchActivitiesToggle);
+    });
+
+    // Keep aria-expanded in sync when sidebar closes via Escape/backdrop
+    window.addEventListener('activities:open', () => {
+      activitiesTriggers.forEach((el) => el.setAttribute('aria-expanded', 'true'));
+    });
+    window.addEventListener('activities:close', () => {
+      activitiesTriggers.forEach((el) => el.setAttribute('aria-expanded', 'false'));
+    });
+    window.addEventListener('activities:toggle', (e) => {
+      const detail = e.detail || {};
+      let next;
+      if (typeof detail.open === 'boolean') next = detail.open;
+      else {
+        const current = document.querySelector('[data-activities-drawer]')?.getAttribute('aria-hidden') === 'false';
+        next = !current;
+      }
+      activitiesTriggers.forEach((el) => el.setAttribute('aria-expanded', String(next)));
+    });
+  })();
+</script>
+
+<style>
+  [data-topbar] {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+</style>
