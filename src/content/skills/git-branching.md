@@ -3,6 +3,7 @@ title: Branching & Merging
 category: Tooling
 order: 32
 dependsOn: [git-fundamentals]
+simulation: git
 starterCode:
   go: |
     // git branch feature/login
