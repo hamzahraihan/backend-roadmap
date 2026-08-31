@@ -1,7 +1,9 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import CodePlayground from '../../components/react/CodePlayground.tsx';
-import ThemeToggle from '../../components/react/ThemeToggle.tsx';
+import GitSimulation from '../../components/react/GitSimulation.tsx';
+import SplitShell from '../../components/SplitShell.astro';
+import TopBar from '../../components/TopBar.astro';
 import { getCollection, render } from 'astro:content';
 import type { SupportedLanguage } from '../../lib/languages';
 
@@ -20,27 +22,22 @@ const languages: SupportedLanguage[] = ['go', 'java', 'typescript', 'python'];
 const starterCode = Object.fromEntries(
   languages.map((lang) => [lang, skill.data.starterCode[lang] ?? '']),
 ) as Record<SupportedLanguage, string>;
+
+const isGitSimulation = skill.data.simulation === 'git' || ['version-control','git-fundamentals','git-branching','git-remotes','github-workflow','cicd'].includes(skill.id);
 ---
 
 <BaseLayout title={skill.data.title}>
   <main class="flex h-screen flex-col">
-    <header class="flex items-center justify-between gap-4 border-b border-zinc-200 px-6 py-3 dark:border-zinc-800">
-      <div class="flex items-center gap-4">
-        <a href="/" class="text-sm text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200">← Roadmap</a>
-        <h1 class="text-lg font-bold">{skill.data.title}</h1>
-        <span class="rounded bg-zinc-100 px-2 py-0.5 text-xs uppercase tracking-wide text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-          {skill.data.category}
-        </span>
-      </div>
-      <ThemeToggle client:load />
-    </header>
-    <div class="flex min-h-0 flex-1 flex-col lg:flex-row">
-      <article class="prose prose-zinc max-w-none min-h-0 overflow-y-auto px-8 py-6 dark:prose-invert lg:w-1/2">
-        <Content />
-      </article>
-      <section class="min-h-0 flex-1 border-t border-zinc-200 lg:w-1/2 lg:flex-none lg:border-l lg:border-t-0 dark:border-zinc-800">
-        <CodePlayground client:load skillId={skill.id} starterCode={starterCode} />
-      </section>
+    <TopBar variant="skill" title={skill.data.title} category={skill.data.category} />
+    <div class="flex min-h-0 flex-1">
+      <SplitShell storageKey="backend-roadmap:split:skill" defaultPct={50} minPct={25} maxPct={75}>
+        <article slot="left" class="prose prose-zinc max-w-none min-h-0 h-full overflow-y-auto px-8 py-6 dark:prose-invert">
+          <Content />
+        </article>
+        <section slot="right" class="flex min-h-0 h-full flex-col border-t border-zinc-200 dark:border-zinc-800 lg:border-l lg:border-t-0">
+          {isGitSimulation ? <GitSimulation client:load skillId={skill.id} /> : <CodePlayground client:load skillId={skill.id} starterCode={starterCode} />}
+        </section>
+      </SplitShell>
     </div>
   </main>
 </BaseLayout>
