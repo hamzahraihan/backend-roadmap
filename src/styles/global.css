@@ -30,6 +30,26 @@ body {
   }
 }
 
+/* Live traffic flow overlay on simulation edges (dash speed set inline from sim utilization) */
+.flow-edge-dash {
+  stroke-dasharray: 7 9;
+  stroke-linecap: round;
+  animation: flow-edge-dash 1s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes flow-edge-dash {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-edge-dash {
+    animation: none;
+  }
+}
+
 .split-dragging {
   cursor: col-resize;
 }
