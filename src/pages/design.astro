@@ -1,0 +1,14 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SimulationStage from '../components/react/SimulationStage.tsx';
+import TopBar from '../components/TopBar.astro';
+---
+
+<BaseLayout title="Design Studio — Backend Roadmap">
+  <main class="flex h-screen flex-col">
+    <TopBar variant="design" />
+    <div class="min-h-0 flex-1">
+      <SimulationStage client:load skillId="free" scenarioId="rate-limiting-url-shortener" layout="studio" />
+    </div>
+  </main>
+</BaseLayout>

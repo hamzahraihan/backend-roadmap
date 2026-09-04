@@ -4,7 +4,7 @@ import ActivitiesSidebar from './react/ActivitiesSidebar.tsx';
 import { getCollection } from 'astro:content';
 
 interface Props {
-  variant?: 'home' | 'skill' | 'playground';
+  variant?: 'home' | 'skill' | 'playground' | 'design';
   title?: string;
   category?: string;
 }
@@ -14,6 +14,7 @@ const { variant = 'home', title, category } = Astro.props;
 const isHome = variant === 'home';
 const isSkill = variant === 'skill';
 const isPlayground = variant === 'playground';
+const isDesign = variant === 'design';
 
 const allSkills = (await getCollection('skills'))
   .sort((a, b) => a.data.order - b.data.order)
@@ -87,6 +88,12 @@ const allSkills = (await getCollection('skills'))
           <span class="text-sm font-medium text-zinc-600 dark:text-zinc-300">Git Playground</span>
         </>
       )}
+      {isDesign && (
+        <>
+          <span class="text-zinc-400 dark:text-zinc-600" aria-hidden="true">›</span>
+          <span class="text-sm font-medium text-zinc-600 dark:text-zinc-300">Design Studio</span>
+        </>
+      )}
     </div>
 
     {isSkill && category && (
@@ -116,12 +123,23 @@ const allSkills = (await getCollection('skills'))
         Git Playground
       </a>
     )}
+    {isHome && (
+      <a href="/design" class="hidden md:inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" class="h-3.5 w-3.5" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/><path d="M7 4.5h4v4M9 11.5H5v-4"/></svg>
+        Design Studio
+      </a>
+    )}
     {isSkill && (
       <a href="/" class="hidden sm:inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
         ← Roadmap
       </a>
     )}
     {isPlayground && (
+      <a href="/" class="hidden sm:inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
+        ← Roadmap
+      </a>
+    )}
+    {isDesign && (
       <a href="/" class="hidden sm:inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
         ← Roadmap
       </a>
