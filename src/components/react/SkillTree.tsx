@@ -375,8 +375,8 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
         <Background
           variant={BackgroundVariant.Dots}
           gap={24}
-          size={1}
-          color={theme === 'dark' ? '#27272a' : '#e4e4e7'}
+          size={1.6}
+          color={theme === 'dark' ? '#52525b' : '#a1a1aa'}
         />
         <Controls />
         <MiniMap
