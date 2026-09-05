@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Editor } from '@monaco-editor/react';
+import { ActivityLogIcon, CheckIcon, PlayIcon, ResetIcon } from '@radix-ui/react-icons';
 import { LANGUAGES, usePersistedLanguage, type SupportedLanguage } from '../../lib/languages';
 import { runCode } from '../../lib/execute';
 import ResizableSplit from './ResizableSplit';
@@ -83,16 +84,18 @@ function CodePlaygroundContent({ skillId, starterCode }: CodePlaygroundProps) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setCode(starterCode[language] ?? '')}
-            className="rounded bg-zinc-800 px-3 py-1 text-xs text-zinc-300 hover:bg-zinc-700"
+            className="inline-flex items-center gap-1 rounded bg-zinc-800 px-3 py-1 text-xs text-zinc-300 hover:bg-zinc-700"
           >
+            <ResetIcon width={13} height={13} className="shrink-0" aria-hidden />
             Reset
           </button>
           <button
             onClick={onRun}
             disabled={running}
-            className="rounded bg-emerald-600 px-4 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded bg-emerald-600 px-4 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {running ? 'Running…' : '▶ Run'}
+            {!running && <PlayIcon width={13} height={13} className="shrink-0" aria-hidden />}
+            {running ? 'Running…' : 'Run'}
           </button>
         </div>
       </div>
@@ -124,16 +127,17 @@ function CodePlaygroundContent({ skillId, starterCode }: CodePlaygroundProps) {
           right={
             <div className="flex min-h-0 h-full flex-col border-t border-zinc-800 lg:border-t">
               <div className="flex items-center justify-between px-4 py-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">Output</span>
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-zinc-500"><ActivityLogIcon width={13} height={13} aria-hidden />Output</span>
                 <button
                   onClick={() => setStatus(skillId, status === 'completed' ? 'in-progress' : 'completed')}
-                  className={`rounded px-3 py-1 text-xs font-medium transition ${
+                  className={`inline-flex items-center gap-1 rounded px-3 py-1 text-xs font-medium transition ${
                     status === 'completed'
                       ? 'bg-emerald-600 text-white hover:bg-emerald-500'
                       : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
                   }`}
                 >
-                  {status === 'completed' ? '✓ Completed' : 'Mark complete'}
+                  {status === 'completed' && <CheckIcon width={13} height={13} className="shrink-0" aria-hidden />}
+                  {status === 'completed' ? 'Completed' : 'Mark complete'}
                 </button>
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto bg-zinc-100 px-4 py-2 font-mono text-xs dark:bg-zinc-950">
