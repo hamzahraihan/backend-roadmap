@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -90,10 +90,13 @@ function SkillSearch({ skills, onPick }: { skills: SkillSummary[]; onPick: (id: 
     <div className="relative">
       <input
         value={query}
+        aria-label="Search skills"
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && matches.length > 0) {
             onPick(matches[0].id);
+            setQuery('');
+          } else if (e.key === 'Escape') {
             setQuery('');
           }
         }}
@@ -102,9 +105,17 @@ function SkillSearch({ skills, onPick }: { skills: SkillSummary[]; onPick: (id: 
         autoComplete="off"
         className="w-44 rounded border border-zinc-300 bg-white/90 px-2.5 py-1 text-xs text-zinc-800 placeholder-zinc-400 outline-none focus:border-sky-500 dark:border-zinc-700 dark:bg-zinc-900/90 dark:text-zinc-100"
       />
-      {matches.length > 0 && (
+      {query.trim().length > 0 && (
         <div className="absolute left-0 top-full z-30 mt-1 w-56 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
-          {matches.map((m) => (
+          {matches.length === 0 ? (
+            <button
+              disabled
+              className="block w-full cursor-default px-3 py-1.5 text-left text-xs text-zinc-400 dark:text-zinc-500"
+            >
+              No matches
+            </button>
+          ) : (
+            matches.map((m) => (
             <button
               key={m.id}
               onClick={() => {
@@ -115,11 +126,48 @@ function SkillSearch({ skills, onPick }: { skills: SkillSummary[]; onPick: (id: 
             >
               {m.title}
             </button>
-          ))}
+            ))
+          )}
         </div>
       )}
     </div>
   );
+}
+
+function applyDim(
+  nodes: Node[],
+  edges: Edge[],
+  neighborhood: Set<string> | null,
+  disabledCats: Set<string>,
+  colorById: Map<string, string>,
+  categoryById: Map<string, string>,
+): { nodes: Node[]; edges: Edge[] } {
+  return {
+    nodes: nodes.map((n) => ({
+      ...n,
+      style: {
+        ...n.style,
+        opacity:
+          (!neighborhood || neighborhood.has(n.id)) &&
+          !disabledCats.has((n.data as unknown as SkillNodeData).skill.category)
+            ? 1
+            : 0.15,
+      },
+    })),
+    edges: edges.map((e) => {
+      const lit =
+        (!neighborhood || (neighborhood.has(e.source) && neighborhood.has(e.target))) &&
+        !disabledCats.has(categoryById.get(e.source) ?? '') &&
+        !disabledCats.has(categoryById.get(e.target) ?? '');
+      const col = colorById.get(e.target) ?? '#a1a1aa';
+      return {
+        ...e,
+        style: { stroke: lit ? col : '#3f3f46', strokeWidth: lit ? 2.5 : 1, opacity: lit ? 1 : 0.25 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: lit ? col : '#3f3f46' },
+        className: lit ? e.className : undefined,
+      };
+    }),
+  };
 }
 
 function SkillTreeContent({ skills }: SkillTreeProps) {
@@ -173,26 +221,31 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // Re-sync when underlying skill data or progress changes.
-  useEffect(() => {
-    setNodes(initialNodes);
-    setEdges(initialEdges);
-  }, [initialNodes, initialEdges, setNodes, setEdges]);
-
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const effectiveSelectedId = skills.some((s) => s.id === selectedId) ? selectedId : null;
 
   const colorById = useMemo(
     () => new Map(skills.map((s) => [s.id, categoryColor(s.category)])),
     [skills],
   );
 
+  const categoryById = useMemo(() => new Map(skills.map((s) => [s.id, s.category])), [skills]);
+
   const neighborhood = useMemo(
-    () => (selectedId ? buildNeighborhood(skills, selectedId) : null),
-    [skills, selectedId],
+    () => (effectiveSelectedId ? buildNeighborhood(skills, effectiveSelectedId) : null),
+    [skills, effectiveSelectedId],
   );
 
   const allCategories = useMemo(() => [...new Set(skills.map((s) => s.category))], [skills]);
   const [disabledCats, setDisabledCats] = useState<Set<string>>(new Set());
+
+  // Re-sync when underlying skill data or progress changes.
+  useEffect(() => {
+    const dimmed = applyDim(initialNodes, initialEdges, neighborhood, disabledCats, colorById, categoryById);
+    setNodes(dimmed.nodes);
+    setEdges(dimmed.edges);
+  }, [initialNodes, initialEdges, neighborhood, disabledCats, colorById, categoryById, setNodes, setEdges]);
 
   const toggleCat = useCallback((cat: string) => {
     setDisabledCats((prev) => {
@@ -205,32 +258,17 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
 
   // Dim everything outside the selected neighborhood; light the neighborhood.
   useEffect(() => {
-    setNodes((ns) =>
-      ns.map((n) => ({
-        ...n,
-        style: {
-          opacity:
-            (!neighborhood || neighborhood.has(n.id)) &&
-            !disabledCats.has((n.data as unknown as SkillNodeData).skill.category)
-              ? 1
-              : 0.15,
-        },
-      })),
-    );
-    setEdges((es) =>
-      es.map((e) => {
-        const lit = !neighborhood || (neighborhood.has(e.source) && neighborhood.has(e.target));
-        const col = colorById.get(e.target) ?? '#a1a1aa';
-        return {
-          ...e,
-          style: { stroke: lit ? col : '#3f3f46', strokeWidth: lit ? 2.5 : 1, opacity: lit ? 1 : 0.25 },
-          markerEnd: { type: MarkerType.ArrowClosed, color: lit ? col : '#3f3f46' },
-        };
-      }),
-    );
-  }, [neighborhood, colorById, setNodes, setEdges, disabledCats]);
+    setNodes((ns) => applyDim(ns, [], neighborhood, disabledCats, colorById, categoryById).nodes);
+    setEdges((es) => applyDim([], es, neighborhood, disabledCats, colorById, categoryById).edges);
+  }, [neighborhood, colorById, categoryById, setNodes, setEdges, disabledCats]);
 
   const [, setViewportTick] = useState(0);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  const completedCount = useMemo(
+    () => skills.filter((s) => getStatus(s.id) === 'completed').length,
+    [skills, getStatus],
+  );
 
   const onNodeClick = useCallback((_: MouseEvent, node: Node) => {
     setSelectedId(node.id);
@@ -249,7 +287,10 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
       setEdges((eds) =>
         eds.map((e) => ({
           ...e,
-          className: e.source === node.id || e.target === node.id ? 'skill-edge-dots' : undefined,
+          className:
+            (e.source === node.id || e.target === node.id) && e.style?.opacity === 1
+              ? 'skill-edge-dots'
+              : undefined,
         })),
       );
     },
@@ -261,7 +302,7 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
   }, [setEdges]);
 
   return (
-    <div className="h-full w-full">
+    <div ref={wrapperRef} className="relative h-full w-full">
       <div className="pointer-events-none absolute left-4 top-4 z-10 flex max-w-[60%] flex-col gap-2">
         <div className="pointer-events-auto flex flex-wrap gap-1.5 rounded bg-white/80 p-2 dark:bg-zinc-900/80">
           <button
@@ -296,10 +337,19 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
               const node = getNode(id);
               if (node) setCenter(node.position.x + NODE_WIDTH / 2, node.position.y + NODE_HEIGHT / 2, { zoom: 1, duration: 400 });
               setSelectedId(id);
+              const picked = skills.find((s) => s.id === id);
+              if (picked) {
+                setDisabledCats((prev) => {
+                  if (!prev.has(picked.category)) return prev;
+                  const next = new Set(prev);
+                  next.delete(picked.category);
+                  return next;
+                });
+              }
             }}
           />
           <span className="rounded bg-white/80 px-2 py-1 font-mono text-[11px] text-zinc-500 dark:bg-zinc-900/80 dark:text-zinc-400">
-            {skills.filter((s) => getStatus(s.id) === 'completed').length} / {skills.length} completed
+            {completedCount} / {skills.length} completed
           </span>
         </div>
       </div>
@@ -314,7 +364,7 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
         onPaneClick={onPaneClick}
         onNodeMouseEnter={onNodeMouseEnter}
         onNodeMouseLeave={onNodeMouseLeave}
-        onMove={() => setViewportTick((t) => t + 1)}
+        onMove={() => selectedId && setViewportTick((t) => t + 1)}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.2}
@@ -342,24 +392,39 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
           maskColor={theme === 'dark' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)'}
         />
       </ReactFlow>
-      {selectedId &&
+      {effectiveSelectedId &&
         (() => {
-          const node = getNode(selectedId);
-          const skill = skills.find((s) => s.id === selectedId);
+          const node = getNode(effectiveSelectedId);
+          const skill = skills.find((s) => s.id === effectiveSelectedId);
           if (!node || !skill) return null;
-          const anchor = flowToScreenPosition({
+          const screen = flowToScreenPosition({
             x: node.position.x + NODE_WIDTH / 2,
             y: node.position.y,
           });
+          const rect = wrapperRef.current?.getBoundingClientRect();
+          const anchorX = rect ? screen.x - rect.left : screen.x;
+          const anchorY = rect ? screen.y - rect.top : screen.y;
+          const width = rect?.width ?? anchorX + 132;
+          const left = Math.min(Math.max(anchorX, 132), Math.max(132, width - 132));
+          const below = anchorY < 160;
+          const status = getStatus(skill.id);
+          const statusStyle = STATUS_STYLES[status];
           return (
             <div
-              className="absolute z-20 w-64 -translate-x-1/2 -translate-y-full rounded-lg border border-zinc-200 bg-white p-3 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
-              style={{ left: anchor.x, top: anchor.y - 12 }}
+              className={`absolute z-20 w-64 -translate-x-1/2 rounded-lg border border-zinc-200 bg-white p-3 shadow-xl dark:border-zinc-700 dark:bg-zinc-900 ${below ? '' : '-translate-y-full'}`}
+              style={{ left, top: below ? anchorY + 12 : anchorY - 12 }}
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{skill.title}</div>
-                  <div className="mt-0.5 text-xs text-zinc-500">{skill.category}</div>
+                  <div className="mt-0.5 flex items-center gap-1.5 text-xs text-zinc-500">
+                    <span>{skill.category}</span>
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${statusStyle.badge}`}
+                    >
+                      {statusStyle.label}
+                    </span>
+                  </div>
                 </div>
                 <button
                   onClick={() => setSelectedId(null)}

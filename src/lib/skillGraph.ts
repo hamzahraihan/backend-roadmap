@@ -27,6 +27,7 @@ export function categoryColor(category: string): string {
 
 export function buildNeighborhood(skills: SkillSummary[], id: string): Set<string> {
   const byId = new Map(skills.map((s) => [s.id, s]));
+  if (!byId.has(id)) return new Set<string>();
   const children = new Map<string, string[]>();
   for (const s of skills) {
     for (const dep of s.dependsOn) {
