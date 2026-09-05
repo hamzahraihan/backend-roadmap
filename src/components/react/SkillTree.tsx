@@ -21,6 +21,7 @@ import { ProgressProvider, useProgressContext } from './ProgressProvider';
 import type { SkillSummary } from '../../lib/skills';
 import type { ProgressStatus } from '../../lib/progress';
 import { useTheme } from '../../lib/theme';
+import { CATEGORY_COLORS, categoryColor } from '../../lib/skillGraph';
 
 const NODE_WIDTH = 200;
 const NODE_HEIGHT = 64;
@@ -43,12 +44,17 @@ function SkillNode({ data }: NodeProps) {
     <div
       className={`relative w-[200px] cursor-pointer rounded-lg border-2 bg-white p-3 shadow-lg transition hover:border-zinc-500 dark:bg-zinc-900/90 ${style.ring}`}
     >
+      <span
+        className="absolute left-2 top-2 h-2.5 w-2.5 rounded-full"
+        style={{ backgroundColor: categoryColor(skill.category) }}
+        title={skill.category}
+      />
       <Handle
         type="target"
         position={Position.Top}
         className="!h-2 !w-2 !border-0 !bg-zinc-500"
       />
-       <div className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">{skill.title}</div>
+       <div className="truncate pl-4 text-sm font-semibold text-zinc-900 dark:text-zinc-100">{skill.title}</div>
       <div className="mt-1 flex items-center justify-between">
         <span className="text-xs text-zinc-500">{skill.category}</span>
         <span
@@ -84,7 +90,7 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
 
   const { nodes, edges } = useMemo(() => {
     const g = new Graph();
-    g.setGraph({ rankdir: 'TB', nodesep: 80, ranksep: 120 });
+    g.setGraph({ rankdir: 'TB', nodesep: 110, ranksep: 150, edgesep: 30, marginx: 40, marginy: 40 });
     g.setDefaultEdgeLabel(() => ({}));
     skills.forEach((s) => g.setNode(s.id, { width: NODE_WIDTH, height: NODE_HEIGHT }));
     skills.forEach((s) => s.dependsOn.forEach((dep) => g.setEdge(dep, s.id)));
@@ -110,8 +116,9 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
           id: `${dep}-${s.id}`,
           source: dep,
           target: s.id,
-          markerEnd: { type: MarkerType.ArrowClosed },
-          style: { stroke: '#71717a', strokeWidth: 3 },
+          type: 'smoothstep',
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#a1a1aa' },
+          style: { stroke: '#a1a1aa', strokeWidth: 1.5 },
         });
       }),
     );
@@ -188,6 +195,17 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
             </span>
           ))}
         </div>
+        <details className="rounded bg-white/80 p-2 dark:bg-zinc-900/80">
+          <summary className="cursor-pointer text-[11px] text-zinc-500 dark:text-zinc-400">Categories</summary>
+          <div className="mt-1.5 grid max-h-48 grid-cols-2 gap-1 overflow-y-auto">
+            {Object.entries(CATEGORY_COLORS).map(([cat, hex]) => (
+              <span key={cat} className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: hex }} />
+                {cat}
+              </span>
+            ))}
+          </div>
+        </details>
         <button
           onClick={clearProgress}
           className="inline-flex items-center gap-1.5 rounded bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
