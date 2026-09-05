@@ -6,7 +6,7 @@
 
 ## Problem
 
-42 nodes / ~45 edges in one top-down dagre layout (`SkillTree.tsx:87`: `rankdir TB, nodesep 80, ranksep 120`). Tangle sources confirmed from data:
+40 nodes / ~45 edges in one top-down dagre layout (`SkillTree.tsx:87`: `rankdir TB, nodesep 80, ranksep 120`). Tangle sources confirmed from data:
 
 - Long backward edges: `cicd (35) ← testing-cicd (120)`, `data-modeling-apis (180) ← rest-api (70), relational-databases (40)`.
 - Wide fan-outs: `internet-basics → 4`, `pick-language → 4`, `rest-api → 5`.
@@ -42,7 +42,7 @@
 
 - Category filter chips (overlay row, top-left): multi-toggle across the 12 categories. Non-matching nodes dim to 15% opacity — never `hidden`, so layout never jumps and path context is preserved. "All" reset chip.
 - Search box (overlay, top-left under chips): filters by title substring; Enter or click zooms to the match (`setCenter`) and selects it (same neighborhood highlight as click).
-- Progress chip: `x / 42 completed` (count from `getStatus`), top-left overlay. Denominator derived from `skills.length`, never hardcoded.
+- Progress chip: `x / 40 completed` (count from `getStatus`), top-left overlay. Denominator derived from `skills.length`, never hardcoded.
 - Legend (existing top-right panel): keep status swatches; add collapsible category section with the 12 dots. Reset-progress button unchanged.
 - MiniMap, Controls, Background, theming (`useTheme`, `colorMode`) unchanged.
 
