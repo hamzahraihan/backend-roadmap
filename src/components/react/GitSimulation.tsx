@@ -23,6 +23,7 @@ function GitSimulationContent({ skillId }: GitSimulationProps) {
   const [injectCmd, setInjectCmd] = useState<string | null>(null);
   const [showCheat, setShowCheat] = useState(false);
   const [hasWon, setHasWon] = useState(false);
+  const [direction, setDirection] = useState<'vertical' | 'horizontal'>('vertical');
 
   // keep engine in sync when state changes via reset
   useEffect(() => {
@@ -87,6 +88,20 @@ function GitSimulationContent({ skillId }: GitSimulationProps) {
             {remoteSynced && <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">Remote in sync.</p>}
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
+            <div className="flex overflow-hidden rounded border border-zinc-200 dark:border-zinc-700" role="tablist" aria-label="Graph direction">
+              {(['vertical', 'horizontal'] as const).map((d) => (
+                <button
+                  key={d}
+                  role="tab"
+                  aria-selected={direction === d}
+                  title={d === 'vertical' ? 'Top-down view' : 'Left-to-right view'}
+                  onClick={() => setDirection(d)}
+                  className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium capitalize transition ${direction === d ? 'bg-sky-600 text-white' : 'bg-white text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
+                >
+                  {d === 'vertical' ? '↕ Top-down' : '↔ Horizontal'}
+                </button>
+              ))}
+            </div>
             <button
               onClick={() => setShowCheat((v) => !v)}
               className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition ${showCheat ? 'bg-sky-600 text-white' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
@@ -120,7 +135,7 @@ function GitSimulationContent({ skillId }: GitSimulationProps) {
           maxPct={70}
           left={
             <div className="flex min-h-[280px] h-full flex-col p-2 lg:p-3">
-              <GitGraph state={state} onCommitClick={(id) => handleInject(`git show ${id.slice(0, 7)}`)} />
+              <GitGraph state={state} direction={direction} onCommitClick={(id) => handleInject(`git show ${id.slice(0, 7)}`)} />
             </div>
           }
           right={

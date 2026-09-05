@@ -12,6 +12,7 @@ import {
   addEdge,
   useEdgesState,
   useNodesState,
+  useUpdateNodeInternals,
   type Connection,
   type Edge,
   type EdgeProps,
@@ -57,11 +58,27 @@ type CanvasNodeData = {
   bottleneck?: boolean;
   failed?: boolean;
   queued?: number;
+  direction?: FlowDirection;
   [key: string]: unknown;
 };
 
-function DesignCanvasNode({ data, selected }: NodeProps) {
+type FlowDirection = 'vertical' | 'horizontal';
+
+function layoutPos(i: number, direction: FlowDirection): { x: number; y: number } {
+  return direction === 'horizontal'
+    ? { x: i * 250, y: 60 + (i % 2) * 150 }
+    : { x: 60 + (i % 2) * 220, y: i * 130 };
+}
+
+function DesignCanvasNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as CanvasNodeData;
+  const horizontal = d.direction === 'horizontal';
+  const updateNodeInternals = useUpdateNodeInternals();
+  // Handle sides flip with direction — React Flow caches handle geometry, so
+  // it must be notified or edges stay glued to the stale side (detached lines).
+  useEffect(() => {
+    updateNodeInternals(id);
+  }, [id, horizontal, updateNodeInternals]);
   return (
     <div
       className={`w-[150px] rounded-lg border-2 bg-white p-2 shadow-lg transition dark:bg-zinc-900/90 ${
@@ -74,7 +91,7 @@ function DesignCanvasNode({ data, selected }: NodeProps) {
               : 'border-zinc-300 dark:border-zinc-700'
       }`}
     >
-      <Handle type="target" position={Position.Top} className="!h-2 !w-2 !border-0 !bg-zinc-500" />
+      <Handle type="target" position={horizontal ? Position.Left : Position.Top} className="!h-2 !w-2 !border-0 !bg-zinc-500" />
       <div className="flex items-center justify-between gap-1">
         <div className="truncate text-xs font-semibold text-zinc-900 dark:text-zinc-100">{d.label}</div>
         {d.failed && <Cross1Icon width={10} height={10} className="shrink-0 text-red-500" aria-hidden />}
@@ -91,7 +108,7 @@ function DesignCanvasNode({ data, selected }: NodeProps) {
           <div className="mt-0.5 font-mono text-[10px] text-zinc-500">Queued {d.queued}</div>
         </div>
       )}
-      <Handle type="source" position={Position.Bottom} className="!h-2 !w-2 !border-0 !bg-zinc-500" />
+      <Handle type="source" position={horizontal ? Position.Right : Position.Bottom} className="!h-2 !w-2 !border-0 !bg-zinc-500" />
     </div>
   );
 }
@@ -171,12 +188,12 @@ const STUDIO_SCENARIOS = [
 
 type Phase = 'idle' | 'playing' | 'paused' | 'step';
 
-function toFlowNodes(state: ReturnType<typeof initialStateFor>): Node[] {
+function toFlowNodes(state: ReturnType<typeof initialStateFor>, direction: FlowDirection = 'vertical'): Node[] {
   return state.nodes.map((n, i) => ({
     id: n.id,
     type: 'design',
-    position: { x: 60 + (i % 2) * 220, y: i * 130 },
-    data: { kind: n.kind, label: DESIGN_KIND_LABELS[n.kind], bottleneck: false, failed: false, queued: 0 } satisfies CanvasNodeData,
+    position: layoutPos(i, direction),
+    data: { kind: n.kind, label: DESIGN_KIND_LABELS[n.kind], bottleneck: false, failed: false, queued: 0, direction } satisfies CanvasNodeData,
   }));
 }
 
@@ -201,6 +218,7 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
   const isFree = preset.id === 'free';
 
   const [mode, setMode] = useState<'guided' | 'free'>(isFree ? 'free' : 'guided');
+  const [direction, setDirection] = useState<FlowDirection>('vertical');
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [ready, setReady] = useState(false);
@@ -227,6 +245,7 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
   const pendingEventsRef = useRef<RunEvent[]>([]);
   const suppressedRef = useRef(0);
   const hopSampleRef = useRef(0);
+  const lastTraceIdRef = useRef(0);
   const nodesRef = useRef<Node[]>([]);
   const logRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -236,7 +255,7 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
   // (re)initialize canvas when scenario changes
   useEffect(() => {
     const fresh = initialStateFor(preset.id);
-    setNodes(toFlowNodes(fresh));
+    setNodes(toFlowNodes(fresh, direction));
     setEdges(toFlowEdges(fresh));
     handleRef.current = null;
     setPhase('idle');
@@ -295,6 +314,7 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
     if (!handleRef.current) {
       const topo = deriveTopology();
       handleRef.current = createRun(topo, { qps, readRatio: readPct / 100, seed: 7, failedKinds: [...failedRef.current] });
+      lastTraceIdRef.current = 0;
     }
     return handleRef.current;
   }, [deriveTopology, qps, readPct]);
@@ -372,6 +392,21 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
         const bottleneck = summary.bottleneck;
         const counts = new Map<string, number>();
         for (const p of snap.inFlight) counts.set(`${p.fromId}→${p.toId}`, (counts.get(`${p.fromId}→${p.toId}`) ?? 0) + 1);
+        // Completion window: instantaneous inFlight systematically misses fast
+        // hops (client/LB/gateway service is ~ms, drained within one substep),
+        // so those edges read flow≈0 while metrics stay live. Count traversed
+        // edges from requests completed since the last flush — hops record the
+        // actual path taken, including cache-shortcut cutoffs.
+        let maxTraceId = lastTraceIdRef.current;
+        for (const t of handle.traces()) {
+          if (t.id <= lastTraceIdRef.current) continue;
+          if (t.id > maxTraceId) maxTraceId = t.id;
+          for (let i = 1; i < t.hops.length; i++) {
+            const key = `${t.hops[i - 1].nodeId}→${t.hops[i].nodeId}`;
+            counts.set(key, (counts.get(key) ?? 0) + 1);
+          }
+        }
+        lastTraceIdRef.current = maxTraceId;
         const kindById = new Map(nodesRef.current.map((n) => [n.id, (n.data as unknown as CanvasNodeData).kind]));
         setEdges((eds) =>
           eds.map((e) => {
@@ -505,6 +540,20 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
     [onEdgesChange, touchTopology],
   );
 
+  const toggleDirection = useCallback(() => {
+    setDirection((prev) => {
+      const next = prev === 'vertical' ? 'horizontal' : 'vertical';
+      setNodes((nds) =>
+        nds.map((n, i) => ({
+          ...n,
+          position: layoutPos(i, next),
+          data: { ...(n.data as unknown as CanvasNodeData), direction: next },
+        })),
+      );
+      return next;
+    });
+  }, [setNodes]);
+
   const addKind = useCallback(
     (kind: DesignKind) => {
       const n = starterNode(kind, kind);
@@ -514,13 +563,13 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
         {
           id: n.id,
           type: 'design',
-          position: { x: 60 + (idx % 2) * 220, y: idx * 130 },
-          data: { kind, label: DESIGN_KIND_LABELS[kind], bottleneck: false, failed: false, queued: 0 } satisfies CanvasNodeData,
+          position: layoutPos(idx, direction),
+          data: { kind, label: DESIGN_KIND_LABELS[kind], bottleneck: false, failed: false, queued: 0, direction } satisfies CanvasNodeData,
         },
       ]);
       touchTopology();
     },
-    [nodes.length, setNodes, touchTopology],
+    [nodes.length, direction, setNodes, touchTopology],
   );
 
   const onConnect = useCallback(
@@ -579,6 +628,20 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
             ].filter(Boolean).join(' • ')}{timelineFor(preset.id).length > 0 ? ' • scripted spike/failure incoming' : ''}</p>}
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
+            <div className="flex overflow-hidden rounded border border-zinc-200 dark:border-zinc-700" role="tablist" aria-label="Canvas direction">
+              {(['vertical', 'horizontal'] as const).map((d) => (
+                <button
+                  key={d}
+                  role="tab"
+                  aria-selected={direction === d}
+                  title={d === 'vertical' ? 'Top-down view' : 'Left-to-right view'}
+                  onClick={() => { if (direction !== d) toggleDirection(); }}
+                  className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium capitalize transition ${direction === d ? 'bg-sky-600 text-white' : 'bg-white text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
+                >
+                  {d === 'vertical' ? '↕ Top-down' : '↔ Horizontal'}
+                </button>
+              ))}
+            </div>
             <div className="flex overflow-hidden rounded border border-zinc-200 dark:border-zinc-700" role="tablist" aria-label="Simulation mode">
               {([{ id: 'guided', Icon: TargetIcon }, { id: 'free', Icon: CubeIcon }] as const).map(({ id: m, Icon }) => (
                 <button

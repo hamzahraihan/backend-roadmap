@@ -5,6 +5,7 @@ import type { GitState, Commit } from '../../lib/git/types';
 interface GitGraphProps {
   state: GitState;
   onCommitClick?: (id: string) => void;
+  direction?: 'vertical' | 'horizontal';
 }
 
 const BRANCH_COLORS: Record<string, string> = {
@@ -24,7 +25,8 @@ function colorForBranch(name: string): string {
   return palette[hash % palette.length];
 }
 
-export default function GitGraph({ state, onCommitClick }: GitGraphProps) {
+export default function GitGraph({ state, onCommitClick, direction = 'vertical' }: GitGraphProps) {
+  const horizontal = direction === 'horizontal';
   const { commits, positions, branchColumns, lines, laneCount } = useMemo(() => {
     // collect commits to show: all, sorted by timestamp desc (newest top)
     const all = Array.from(state.commits.values()).sort((a, b) => b.timestamp - a.timestamp);
@@ -52,10 +54,10 @@ export default function GitGraph({ state, onCommitClick }: GitGraphProps) {
     }
     const laneCount = colMap.size || 1;
 
-    // positions
+    // positions — vertical: time flows top-down (newest top), lanes are columns.
+    // horizontal: time flows left-to-right (newest left), lanes are rows.
     const pos = new Map<string, { x: number; y: number; commit: Commit; col: number }>();
     show.forEach((c, idx) => {
-      const y = 36 + idx * 44;
       // determine column: based on branchAtCreation if exists, else find branch that points to it
       let col = colMap.get(c.branchAtCreation) ?? 0;
       // if commit is merge commit, keep at current head's branch column? Already accounted
@@ -65,7 +67,8 @@ export default function GitGraph({ state, onCommitClick }: GitGraphProps) {
         if (br.target === c.id) { foundBranch = bName; break; }
       }
       if (foundBranch) col = colMap.get(foundBranch) ?? col;
-      const x = 28 + col * 56;
+      const x = horizontal ? 60 + idx * 200 : 28 + col * 56;
+      const y = horizontal ? 44 + col * 64 : 36 + idx * 44;
       pos.set(c.id, { x, y, commit: c, col });
     });
 
@@ -84,7 +87,7 @@ export default function GitGraph({ state, onCommitClick }: GitGraphProps) {
     }
 
     return { commits: show, positions: pos, branchColumns: colMap, lines, laneCount };
-  }, [state.commits, state.branches, state.remotes]);
+  }, [state.commits, state.branches, state.remotes, horizontal]);
 
   // HEAD and branch decorations
   const headId = state.head ? state.branches.get(state.head)?.target ?? state.detachedCommit : state.detachedCommit;
@@ -110,8 +113,12 @@ export default function GitGraph({ state, onCommitClick }: GitGraphProps) {
     decoMap.set(cid, arr);
   }
 
-  const totalHeight = Math.max(220, commits.length * 44 + 60);
-  const totalWidth = Math.max(360, 56 + laneCount * 56 + 220);
+  const totalHeight = horizontal
+    ? Math.max(220, 80 + laneCount * 64 + 60)
+    : Math.max(220, commits.length * 44 + 60);
+  const totalWidth = horizontal
+    ? Math.max(360, commits.length * 200 + 200)
+    : Math.max(360, 56 + laneCount * 56 + 220);
 
   // staging summary
   const staged = Array.from(state.workingDir.values()).filter((f) => f.status === 'staged').map((f) => f.path);
@@ -158,10 +165,14 @@ export default function GitGraph({ state, onCommitClick }: GitGraphProps) {
           </div>
         ) : (
           <svg width={totalWidth} height={totalHeight} className="block">
-            {/* lane verticals faint */}
-            {Array.from(branchColumns.values()).map((col) => (
-              <line key={col} x1={28 + col * 56} y1={20} x2={28 + col * 56} y2={totalHeight - 20} stroke="#e4e4e7" strokeOpacity={0.6} strokeWidth={1} strokeDasharray="4 4" className="dark:opacity-20" />
-            ))}
+            {/* lane guides faint — vertical columns in top-down, horizontal rows in left-to-right */}
+            {Array.from(branchColumns.values()).map((col) =>
+              horizontal ? (
+                <line key={col} x1={20} y1={44 + col * 64} x2={totalWidth - 20} y2={44 + col * 64} stroke="#e4e4e7" strokeOpacity={0.6} strokeWidth={1} strokeDasharray="4 4" className="dark:opacity-20" />
+              ) : (
+                <line key={col} x1={28 + col * 56} y1={20} x2={28 + col * 56} y2={totalHeight - 20} stroke="#e4e4e7" strokeOpacity={0.6} strokeWidth={1} strokeDasharray="4 4" className="dark:opacity-20" />
+              ),
+            )}
             {/* connections */}
             {lines.map((l, i) => (
               <g key={i}>
@@ -185,14 +196,29 @@ export default function GitGraph({ state, onCommitClick }: GitGraphProps) {
                   ) : (
                     <circle cx={p.x} cy={p.y} r={isHead ? 8 : 6} fill={colColor} stroke={isHead ? '#18181b' : 'white'} strokeWidth={isHead ? 2.5 : 1.2} className="dark:stroke-zinc-900" />
                   )}
-                  {/* commit label */}
-                  <text x={p.x + 18} y={p.y + 4} fontFamily="ui-monospace, monospace" fontSize={11} fill="#18181b" className="dark:fill-zinc-100">
-                    {c.shortId} {c.message}
-                  </text>
-                  {deco.length > 0 && (
-                    <text x={p.x + 18} y={p.y + 16} fontFamily="ui-monospace, monospace" fontSize={9} fill="#71717a">
-                      ({deco.join(', ')})
-                    </text>
+                  {/* commit label — to the right in top-down, below in left-to-right */}
+                  {horizontal ? (
+                    <>
+                      <text x={p.x} y={p.y + 24} textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize={11} fill="#18181b" className="dark:fill-zinc-100">
+                        {c.shortId} {c.message.length > 18 ? `${c.message.slice(0, 18)}…` : c.message}
+                      </text>
+                      {deco.length > 0 && (
+                        <text x={p.x} y={p.y + 36} textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize={9} fill="#71717a">
+                          ({deco.join(', ').length > 24 ? `${deco.join(', ').slice(0, 24)}…` : deco.join(', ')})
+                        </text>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <text x={p.x + 18} y={p.y + 4} fontFamily="ui-monospace, monospace" fontSize={11} fill="#18181b" className="dark:fill-zinc-100">
+                        {c.shortId} {c.message}
+                      </text>
+                      {deco.length > 0 && (
+                        <text x={p.x + 18} y={p.y + 16} fontFamily="ui-monospace, monospace" fontSize={9} fill="#71717a">
+                          ({deco.join(', ')})
+                        </text>
+                      )}
+                    </>
                   )}
                 </g>
               );
@@ -203,7 +229,7 @@ export default function GitGraph({ state, onCommitClick }: GitGraphProps) {
                 {(() => {
                   const p = positions.get(headId)!;
                   return (
-                    <g transform={`translate(${p.x - 18}, ${p.y})`}>
+                    <g transform={horizontal ? `translate(${p.x}, ${p.y})` : `translate(${p.x - 18}, ${p.y})`}>
                       <text x={0} y={-14} textAnchor="middle" fontSize={10} fill="#0ea5e9" fontWeight={600}>
                         HEAD
                       </text>

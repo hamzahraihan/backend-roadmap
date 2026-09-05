@@ -162,6 +162,58 @@ export function createRun(topo: PlayerTopology, opts: PlayerOpts): RunHandle {
   const hasCachePath = basePath.some((id) => kindOf.get(id) === 'cache');
   const cacheEffective = hasCachePath && readRatio >= 0.5;
 
+  // Fan-out routing: forward adjacency + reverse reachability (can this node
+  // still reach a sink?) so each request round-robins across parallel branches
+  // (e.g. LB → app1/app2). Without this every request follows the single BFS
+  // basePath and replica edges never carry packets — they look dead while
+  // metrics stay live.
+  const fwd = new Map<string, string[]>();
+  const rev = new Map<string, string[]>();
+  for (const n of topo.nodes) {
+    fwd.set(n.id, []);
+    rev.set(n.id, []);
+  }
+  for (const e of topo.edges) {
+    if (fwd.has(e.from) && fwd.has(e.to)) {
+      fwd.get(e.from)!.push(e.to);
+      rev.get(e.to)!.push(e.from);
+    }
+  }
+  const canReachSink = new Set<string>();
+  const sinkIds = topo.nodes.filter((n) => (['sql', 'nosql', 'storage'] as DesignKind[]).includes(n.kind)).map((n) => n.id);
+  const revQueue = [...sinkIds];
+  for (const s of sinkIds) canReachSink.add(s);
+  while (revQueue.length > 0) {
+    const cur = revQueue.shift()!;
+    for (const prev of rev.get(cur) ?? []) {
+      if (!canReachSink.has(prev)) {
+        canReachSink.add(prev);
+        revQueue.push(prev);
+      }
+    }
+  }
+  const rr = new Map<string, number>();
+  function pickPath(): string[] {
+    if (basePath.length === 0) return [];
+    const starts = topo.nodes.filter((n) => n.kind === 'client').map((n) => n.id);
+    if (starts.length === 0) return [...basePath];
+    const si = (rr.get('__start') ?? 0) % starts.length;
+    rr.set('__start', (rr.get('__start') ?? 0) + 1);
+    const path = [starts[si]];
+    const visited = new Set(path);
+    for (let guard = 0; guard < topo.nodes.length + 1; guard++) {
+      const cur = path[path.length - 1];
+      if ((['sql', 'nosql', 'storage'] as DesignKind[]).includes(kindOf.get(cur)!)) return path;
+      const nexts = (fwd.get(cur) ?? []).filter((id) => !visited.has(id) && canReachSink.has(id));
+      if (nexts.length === 0) break;
+      const ni = (rr.get(cur) ?? 0) % nexts.length;
+      rr.set(cur, (rr.get(cur) ?? 0) + 1);
+      path.push(nexts[ni]);
+      visited.add(nexts[ni]);
+    }
+    return path.length > 1 ? path : [...basePath];
+  }
+
   function finish(req: LiveRequest, error?: string) {
     req.done = true;
     live.delete(req.id);
@@ -224,8 +276,10 @@ export function createRun(topo: PlayerTopology, opts: PlayerOpts): RunHandle {
   }
 
   function serveQueues(dt: number, events: RunEvent[], t: number) {
-    // path order first so downstream hops progress in the same tick they arrive
-    const order = [...basePath, ...Array.from(queues.keys()).filter((id) => !basePath.includes(id))];
+    // path order first so downstream hops progress in the same tick they arrive.
+    // Union with every topo node so alternate fan-out branches (absent from the
+    // single BFS basePath) still get service slots.
+    const order = [...basePath, ...topo.nodes.map((n) => n.id).filter((id) => !basePath.includes(id)), ...Array.from(queues.keys()).filter((id) => !basePath.includes(id))];
     for (const nodeId of order) {
       const q = queues.get(nodeId);
       if (!q || q.length === 0) continue;
@@ -279,7 +333,7 @@ export function createRun(topo: PlayerTopology, opts: PlayerOpts): RunHandle {
     carry -= n;
     for (let i = 0; i < n; i++) {
       seq += 1;
-      const req: LiveRequest = { id: seq, path: basePath, hopIdx: 0, hopElapsed: 0, serviceNeeded: 0, hopTotal: 0, waited: 0, hit: false, hops: [], done: false };
+      const req: LiveRequest = { id: seq, path: pickPath(), hopIdx: 0, hopElapsed: 0, serviceNeeded: 0, hopTotal: 0, waited: 0, hit: false, hops: [], done: false };
       live.set(seq, req);
       // spread arrivals across the substep so fast hops can't predate arrival
       startHop(req, events, tickStart + (dt * (i + 1)) / Math.max(1, n));
