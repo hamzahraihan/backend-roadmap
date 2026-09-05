@@ -16,6 +16,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Graph, layout } from '@dagrejs/dagre';
+import { ResetIcon } from '@radix-ui/react-icons';
 import { ProgressProvider, useProgressContext } from './ProgressProvider';
 import type { SkillSummary } from '../../lib/skills';
 import type { ProgressStatus } from '../../lib/progress';
@@ -189,8 +190,9 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
         </div>
         <button
           onClick={clearProgress}
-          className="rounded bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+          className="inline-flex items-center gap-1.5 rounded bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
         >
+          <ResetIcon width={13} height={13} className="shrink-0" aria-hidden />
           Reset progress
         </button>
       </div>
