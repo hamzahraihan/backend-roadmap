@@ -1,3 +1,4 @@
+import { ArrowRightIcon } from '@radix-ui/react-icons';
 import { CHEAT_SHEET, GROUP_ORDER } from '../../lib/git/helpText';
 
 interface Props {
@@ -29,7 +30,7 @@ export default function GitCheatSheet({ onPick }: Props) {
                   <div className="mt-0.5 font-mono text-[11px] text-zinc-400">
                     <span className="text-zinc-500">usage:</span> {it.usage}
                   </div>
-                  <div className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400">→ {it.example}</div>
+                  <div className="flex items-center gap-1 font-mono text-[11px] text-emerald-600 dark:text-emerald-400"><ArrowRightIcon width={11} height={11} className="shrink-0" aria-hidden />{it.example}</div>
                 </button>
               ))}
             </div>
