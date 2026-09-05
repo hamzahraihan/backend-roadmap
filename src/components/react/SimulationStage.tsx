@@ -19,6 +19,29 @@ import {
   type NodeProps,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import {
+  ActivityLogIcon,
+  BarChartIcon,
+  ChatBubbleIcon,
+  CheckCircledIcon,
+  CheckIcon,
+  ClockIcon,
+  Cross1Icon,
+  CrossCircledIcon,
+  CubeIcon,
+  ExclamationTriangleIcon,
+  LightningBoltIcon,
+  Link2Icon,
+  MagnifyingGlassIcon,
+  PauseIcon,
+  PlayIcon,
+  PlusIcon,
+  QuestionMarkCircledIcon,
+  ResetIcon,
+  TargetIcon,
+  TimerIcon,
+  TrackNextIcon,
+} from '@radix-ui/react-icons';
 import { simulateTraffic, validateTopology } from '../../lib/design/engine';
 import { createRun, type RequestTrace, type RunEvent, type RunHandle, type RunSummary } from '../../lib/design/player';
 import { checkRunObjective, getPreset, initialStateFor, sloFor, starterNode } from '../../lib/design/presets';
@@ -54,7 +77,7 @@ function DesignCanvasNode({ data, selected }: NodeProps) {
       <Handle type="target" position={Position.Top} className="!h-2 !w-2 !border-0 !bg-zinc-500" />
       <div className="flex items-center justify-between gap-1">
         <div className="truncate text-xs font-semibold text-zinc-900 dark:text-zinc-100">{d.label}</div>
-        {d.failed && <span className="text-[10px] font-bold text-red-500">✕</span>}
+        {d.failed && <Cross1Icon width={10} height={10} className="shrink-0 text-red-500" aria-hidden />}
       </div>
       <div className="mt-0.5 text-[10px] uppercase tracking-wide text-zinc-500">{DESIGN_KIND_LABELS[d.kind]}</div>
       {(d.queued ?? 0) > 0 && (
@@ -65,7 +88,7 @@ function DesignCanvasNode({ data, selected }: NodeProps) {
               style={{ width: `${Math.min(100, ((d.queued ?? 0) / 50) * 100)}%` }}
             />
           </div>
-          <div className="mt-0.5 font-mono text-[10px] text-zinc-500">● {d.queued} queued</div>
+          <div className="mt-0.5 font-mono text-[10px] text-zinc-500">Queued {d.queued}</div>
         </div>
       )}
       <Handle type="source" position={Position.Bottom} className="!h-2 !w-2 !border-0 !bg-zinc-500" />
@@ -139,11 +162,11 @@ interface SimulationStageProps {
 }
 
 const STUDIO_SCENARIOS = [
-  { id: 'rate-limiting-url-shortener', label: 'TinyURL' },
-  { id: 'realtime-rides-feed', label: 'Chat & Rides' },
-  { id: 'databases-sharding', label: 'Scaling' },
-  { id: 'distributed-failures', label: 'Failures' },
-  { id: 'free', label: 'Free canvas' },
+  { id: 'rate-limiting-url-shortener', label: 'TinyURL', Icon: Link2Icon },
+  { id: 'realtime-rides-feed', label: 'Chat & Rides', Icon: ChatBubbleIcon },
+  { id: 'databases-sharding', label: 'Scaling', Icon: BarChartIcon },
+  { id: 'distributed-failures', label: 'Failures', Icon: ExclamationTriangleIcon },
+  { id: 'free', label: 'Free canvas', Icon: CubeIcon },
 ];
 
 type Phase = 'idle' | 'playing' | 'paused' | 'step';
@@ -386,7 +409,7 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
         }
         pendingEventsRef.current = [];
         if (suppressedRef.current >= 200) {
-          lines.push(`⋯ ${suppressedRef.current} routine hops sampled out — spikes, failures, and drops always shown`);
+          lines.push(`… ${suppressedRef.current} routine hops sampled out — spikes, failures, and drops always shown`);
           suppressedRef.current = 0;
         }
         pushLog(lines);
@@ -407,7 +430,7 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
       scenario: { qps, readRatio: readPct / 100, failedKind: null },
     });
     if (problems.length > 0) {
-      pushLog(problems.map((p) => `⚠ ${p}`));
+      pushLog(problems);
       return;
     }
     setPhase('playing');
@@ -531,8 +554,9 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
                 setActiveScenario(s.id);
                 setMode(s.id === 'free' ? 'free' : 'guided');
               }}
-              className={`rounded px-2.5 py-1 text-xs font-medium transition ${activeScenario === s.id ? 'bg-sky-600 text-white' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
+              className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition ${activeScenario === s.id ? 'bg-sky-600 text-white' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
             >
+              <s.Icon width={13} height={13} className="shrink-0" aria-hidden />
               {s.label}
             </button>
           ))}
@@ -544,11 +568,11 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
             <div className="flex items-center gap-2">
               <span className="rounded bg-sky-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">Design Simulation</span>
               <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{objective.title}</span>
-              {hasWon && <span className="rounded bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white">✓ Objective met</span>}
-              <span className="font-mono text-xs text-zinc-500">{fmtClock(clock)}</span>
+              {hasWon && <span className="inline-flex items-center gap-1 rounded bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white"><CheckIcon width={11} height={11} aria-hidden />Objective met</span>}
+              <span className="inline-flex items-center gap-1 font-mono text-xs text-zinc-500"><ClockIcon width={12} height={12} aria-hidden />{fmtClock(clock)}</span>
             </div>
             <p className="mt-1 max-w-[60ch] text-xs leading-5 text-zinc-600 dark:text-zinc-400">{objective.description}</p>
-            {mode === 'guided' && <p className="mt-1 font-mono text-xs text-zinc-500">SLO: {[
+            {mode === 'guided' && <p className="mt-1 font-mono text-xs text-zinc-500"><span className="mr-1 inline-flex translate-y-[2px] items-center"><TargetIcon width={12} height={12} aria-hidden /></span>SLO: {[
               slo.p99LtMs !== undefined ? `p99 < ${slo.p99LtMs}ms` : null,
               slo.errLtPct !== undefined ? `errors < ${slo.errLtPct}%` : null,
               slo.minCompleted !== undefined ? `≥${slo.minCompleted} served` : null,
@@ -556,66 +580,71 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <div className="flex overflow-hidden rounded border border-zinc-200 dark:border-zinc-700" role="tablist" aria-label="Simulation mode">
-              {(['guided', 'free'] as const).map((m) => (
+              {([{ id: 'guided', Icon: TargetIcon }, { id: 'free', Icon: CubeIcon }] as const).map(({ id: m, Icon }) => (
                 <button
                   key={m}
                   role="tab"
                   aria-selected={mode === m}
                   onClick={() => { setMode(m); setHasWon(false); }}
-                  className={`px-2 py-1 text-xs font-medium capitalize transition ${mode === m ? 'bg-sky-600 text-white' : 'bg-white text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
+                  className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium capitalize transition ${mode === m ? 'bg-sky-600 text-white' : 'bg-white text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
                 >
+                  <Icon width={12} height={12} className="shrink-0" aria-hidden />
                   {m}
                 </button>
               ))}
             </div>
             <button
               onClick={() => setShowHints((v) => !v)}
-              className={`rounded px-2 py-1 text-xs font-medium transition ${showHints ? 'bg-sky-600 text-white' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
+              className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition ${showHints ? 'bg-sky-600 text-white' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
             >
-              ? Patterns
+              <QuestionMarkCircledIcon width={13} height={13} className="shrink-0" aria-hidden />
+              Patterns
             </button>
             <button
               onClick={() => restartRun('Canvas reset')}
-              className="rounded bg-zinc-100 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              className="inline-flex items-center gap-1 rounded bg-zinc-100 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
             >
+              <ResetIcon width={13} height={13} className="shrink-0" aria-hidden />
               Reset
             </button>
             <button
               onClick={() => setStatus(skillId, status === 'completed' ? 'in-progress' : 'completed')}
-              className={`rounded px-3 py-1 text-xs font-semibold transition ${status === 'completed' || hasWon ? 'bg-emerald-600 text-white hover:bg-emerald-500' : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700'}`}
+              className={`inline-flex items-center gap-1 rounded px-3 py-1 text-xs font-semibold transition ${status === 'completed' || hasWon ? 'bg-emerald-600 text-white hover:bg-emerald-500' : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700'}`}
             >
-              {status === 'completed' ? '✓ Completed' : hasWon ? 'Mark complete ✓' : 'Mark complete'}
+              {(status === 'completed' || hasWon) && <CheckIcon width={13} height={13} className="shrink-0" aria-hidden />}
+              {status === 'completed' ? 'Completed' : 'Mark complete'}
             </button>
           </div>
         </div>
         {/* transport */}
         <div className="mt-2 flex flex-wrap items-center gap-1.5" aria-label="Playback controls">
           {phase !== 'playing' ? (
-            <button onClick={onPlay} className="rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500">▶ Play</button>
+            <button onClick={onPlay} className="inline-flex items-center gap-1.5 rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500"><PlayIcon width={13} height={13} className="shrink-0" aria-hidden />Play</button>
           ) : (
-            <button onClick={onPause} className="rounded bg-amber-500 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-400">❚❚ Pause</button>
+            <button onClick={onPause} className="inline-flex items-center gap-1.5 rounded bg-amber-500 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-400"><PauseIcon width={13} height={13} className="shrink-0" aria-hidden />Pause</button>
           )}
-          <button onClick={onStepOnce} className="rounded bg-zinc-100 px-2.5 py-1 text-xs text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700">Step +0.2s</button>
+          <button onClick={onStepOnce} title="Advance 0.2 simulated seconds" className="inline-flex items-center gap-1.5 rounded bg-zinc-100 px-2.5 py-1 text-xs text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"><TrackNextIcon width={13} height={13} className="shrink-0" aria-hidden />Step</button>
           <div className="flex overflow-hidden rounded border border-zinc-200 dark:border-zinc-700" aria-label="Speed">
             {[1, 2, 4].map((s) => (
               <button key={s} onClick={() => setSpeed(s)} aria-pressed={speed === s} className={`px-2 py-1 font-mono text-xs transition ${speed === s ? 'bg-sky-600 text-white' : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}>{s}×</button>
             ))}
           </div>
           <span className="mx-1 h-4 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
-          <button onClick={() => fireManual('spike')} className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-amber-500/60 hover:text-amber-600 dark:border-zinc-700 dark:text-zinc-300">⚡ Spike</button>
-          <button onClick={() => fireManual('fail', 'app')} className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-red-500/60 hover:text-red-500 dark:border-zinc-700 dark:text-zinc-300">✕ Kill app</button>
-          <button onClick={() => fireManual('fail', 'sql')} className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-red-500/60 hover:text-red-500 dark:border-zinc-700 dark:text-zinc-300">✕ Kill SQL</button>
-          <button onClick={() => fireManual('heal', 'app')} className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-emerald-500/60 hover:text-emerald-600 dark:border-zinc-700 dark:text-zinc-300">+ Heal app</button>
-          <button onClick={() => fireManual('heal', 'sql')} className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-emerald-500/60 hover:text-emerald-600 dark:border-zinc-700 dark:text-zinc-300">+ Heal SQL</button>
+          <button onClick={() => fireManual('spike')} className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-amber-500/60 hover:text-amber-600 dark:border-zinc-700 dark:text-zinc-300"><LightningBoltIcon width={13} height={13} className="shrink-0" aria-hidden />Spike</button>
+          <button onClick={() => fireManual('fail', 'app')} className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-red-500/60 hover:text-red-500 dark:border-zinc-700 dark:text-zinc-300"><CrossCircledIcon width={13} height={13} className="shrink-0" aria-hidden />Kill app</button>
+          <button onClick={() => fireManual('fail', 'sql')} className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-red-500/60 hover:text-red-500 dark:border-zinc-700 dark:text-zinc-300"><CrossCircledIcon width={13} height={13} className="shrink-0" aria-hidden />Kill SQL</button>
+          <button onClick={() => fireManual('heal', 'app')} className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-emerald-500/60 hover:text-emerald-600 dark:border-zinc-700 dark:text-zinc-300"><CheckCircledIcon width={13} height={13} className="shrink-0" aria-hidden />Heal app</button>
+          <button onClick={() => fireManual('heal', 'sql')} className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-emerald-500/60 hover:text-emerald-600 dark:border-zinc-700 dark:text-zinc-300"><CheckCircledIcon width={13} height={13} className="shrink-0" aria-hidden />Heal SQL</button>
         </div>
         <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Add components">
           {preset.palette.map((kind) => (
             <button
               key={kind}
               onClick={() => addKind(kind)}
-              className="rounded border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs text-zinc-700 hover:border-sky-500/60 hover:bg-sky-500/10 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+              className="inline-flex items-center gap-1 rounded border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs text-zinc-700 hover:border-sky-500/60 hover:bg-sky-500/10 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
             >
-              + {DESIGN_KIND_LABELS[kind]}
+              <PlusIcon width={12} height={12} className="shrink-0" aria-hidden />
+              {DESIGN_KIND_LABELS[kind]}
             </button>
           ))}
         </div>
@@ -663,9 +692,9 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
                   <span className="font-mono text-xs text-zinc-500">{fmtClock(clock)} · {speed}×</span>
                 </div>
                 <div className="mt-1 grid grid-cols-3 gap-2 font-mono text-center">
-                  <div className="rounded bg-zinc-50 px-1 py-1.5 dark:bg-zinc-950"><div className="text-[10px] text-zinc-500">p99</div><div className="text-sm text-emerald-400">{metrics ? `${metrics.p99Ms}ms` : '—'}</div></div>
-                  <div className="rounded bg-zinc-50 px-1 py-1.5 dark:bg-zinc-950"><div className="text-[10px] text-zinc-500">errors</div><div className={`text-sm ${metrics && metrics.errPct > 5 ? 'text-red-400' : 'text-zinc-200'}`}>{metrics ? `${metrics.errPct}%` : '—'}</div></div>
-                  <div className="rounded bg-zinc-50 px-1 py-1.5 dark:bg-zinc-950"><div className="text-[10px] text-zinc-500">rps</div><div className="text-sm text-sky-400">{metrics ? metrics.rps : '—'}</div></div>
+                  <div className="rounded bg-zinc-50 px-1 py-1.5 dark:bg-zinc-950"><div className="flex items-center justify-center gap-1 text-[10px] text-zinc-500"><TimerIcon width={11} height={11} aria-hidden />p99</div><div className="text-sm text-emerald-400">{metrics ? `${metrics.p99Ms}ms` : '—'}</div></div>
+                  <div className="rounded bg-zinc-50 px-1 py-1.5 dark:bg-zinc-950"><div className="flex items-center justify-center gap-1 text-[10px] text-zinc-500"><ExclamationTriangleIcon width={11} height={11} aria-hidden />errors</div><div className={`text-sm ${metrics && metrics.errPct > 5 ? 'text-red-400' : 'text-zinc-200'}`}>{metrics ? `${metrics.errPct}%` : '—'}</div></div>
+                  <div className="rounded bg-zinc-50 px-1 py-1.5 dark:bg-zinc-950"><div className="flex items-center justify-center gap-1 text-[10px] text-zinc-500"><ActivityLogIcon width={11} height={11} aria-hidden />rps</div><div className="text-sm text-sky-400">{metrics ? metrics.rps : '—'}</div></div>
                 </div>
                 <div className="mt-2 flex h-8 items-end gap-[2px]" aria-hidden>
                   {spark.map((v, i) => (
@@ -684,7 +713,7 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
                 <p className="mt-1 text-[10px] text-zinc-500">Sliders apply live. Editing topology restarts the run on next Play.</p>
               </div>
               <div className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
-                <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Inspect a request</div>
+                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-500"><MagnifyingGlassIcon width={13} height={13} aria-hidden />Inspect a request</div>
                 <div className="mt-1 flex gap-1.5">
                   <select value={inspectId} onChange={(e) => setInspectId(e.target.value === '' ? '' : Number(e.target.value))} className="min-w-0 flex-1 rounded border border-zinc-300 bg-white px-2 py-1 font-mono text-xs dark:border-zinc-700 dark:bg-zinc-800" aria-label="Select request to inspect">
                     <option value="">{recentTraces.length === 0 ? 'Run or step to capture requests' : 'Pick a request…'}</option>
@@ -705,7 +734,7 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
               <div ref={logRef} className="min-h-[120px] flex-1 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950 p-3 font-mono text-xs leading-5" aria-label="Simulation event log" aria-live="off">
                 {log.length === 0 && <span className="text-zinc-500">Event log — play the simulation and watch requests, spikes, and failures stream by.</span>}
                 {log.map((line, i) => (
-                  <div key={`${i}-${line.slice(0, 12)}`} className={line.startsWith('⋯') ? 'text-zinc-500' : line.startsWith('⚠') ? 'text-red-400' : line.includes('failed') || line.includes('Spike') || line.includes('spike') ? 'text-amber-300' : line.includes('recovered') || line.includes('Objective') ? 'text-emerald-300' : 'text-zinc-300'}>{line}</div>
+                  <div key={`${i}-${line.slice(0, 12)}`} className={line.startsWith('…') ? 'text-zinc-500' : line.startsWith('Add a') || line.startsWith('Connect') || line.startsWith('No request') || line.startsWith('A connection') ? 'text-red-400' : line.includes('failed') || line.includes('Spike') || line.includes('spike') ? 'text-amber-300' : line.includes('recovered') || line.includes('Objective') ? 'text-emerald-300' : 'text-zinc-300'}>{line}</div>
                 ))}
                 {mode === 'guided' && hasWon && <div className="mt-1 font-sans text-xs font-semibold text-emerald-400">{preset.objective.winMessage}</div>}
               </div>
