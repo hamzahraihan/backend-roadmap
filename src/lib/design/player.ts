@@ -1,5 +1,5 @@
 import { BASE_LATENCY_MS, findRequestPath, validateTopology } from './engine';
-import { DESIGN_KIND_LABELS, type DesignKind } from './types';
+import { DESIGN_KIND_LABELS, SINK_KINDS, type DesignKind } from './types';
 
 export interface PlayerTopology {
   nodes: { id: string; kind: DesignKind }[];
@@ -91,7 +91,7 @@ export function mulberry32(seed: number): () => number {
   };
 }
 
-const LOAD_SENSITIVE: DesignKind[] = ['app', 'sql', 'nosql', 'storage'];
+const LOAD_SENSITIVE: DesignKind[] = ['app', 'auth', 'search', 'sql', 'nosql', 'storage'];
 
 interface LiveRequest {
   id: number;
@@ -180,7 +180,7 @@ export function createRun(topo: PlayerTopology, opts: PlayerOpts): RunHandle {
     }
   }
   const canReachSink = new Set<string>();
-  const sinkIds = topo.nodes.filter((n) => (['sql', 'nosql', 'storage'] as DesignKind[]).includes(n.kind)).map((n) => n.id);
+  const sinkIds = topo.nodes.filter((n) => SINK_KINDS.includes(n.kind)).map((n) => n.id);
   const revQueue = [...sinkIds];
   for (const s of sinkIds) canReachSink.add(s);
   while (revQueue.length > 0) {
@@ -203,7 +203,7 @@ export function createRun(topo: PlayerTopology, opts: PlayerOpts): RunHandle {
     const visited = new Set(path);
     for (let guard = 0; guard < topo.nodes.length + 1; guard++) {
       const cur = path[path.length - 1];
-      if ((['sql', 'nosql', 'storage'] as DesignKind[]).includes(kindOf.get(cur)!)) return path;
+      if (SINK_KINDS.includes(kindOf.get(cur)!)) return path;
       const nexts = (fwd.get(cur) ?? []).filter((id) => !visited.has(id) && canReachSink.has(id));
       if (nexts.length === 0) break;
       const ni = (rr.get(cur) ?? 0) % nexts.length;
