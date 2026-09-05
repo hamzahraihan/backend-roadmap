@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowRightIcon } from '@radix-ui/react-icons';
 import { ProgressProvider, useProgressContext } from './ProgressProvider';
 import type { SkillSummary } from '../../lib/skills';
 
@@ -276,8 +277,8 @@ function ActivitiesSidebarInner({ skills }: Props) {
             <span>
               {skills.filter((s) => getStatus(s.id) === 'completed').length} / {skills.length} completed
             </span>
-            <a href="/" className="font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100">
-              View graph →
+            <a href="/" className="inline-flex items-center gap-1 font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100">
+              View graph <ArrowRightIcon width={13} height={13} className="shrink-0" aria-hidden />
             </a>
           </div>
         </div>
