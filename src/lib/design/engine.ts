@@ -10,11 +10,16 @@ import {
 /** Base per-hop latency in ms. Queue is async: 0 blocking, noted separately. */
 export const BASE_LATENCY_MS: Record<DesignKind, number> = {
   client: 5,
+  dns: 2,
   cdn: 10,
+  waf: 3,
   lb: 2,
   gateway: 4,
+  ratelimit: 2,
+  auth: 10,
   app: 20,
   cache: 3,
+  search: 12,
   sql: 25,
   nosql: 12,
   queue: 0,
@@ -22,7 +27,7 @@ export const BASE_LATENCY_MS: Record<DesignKind, number> = {
 };
 
 /** Kinds that feel load pressure (replicas help). */
-const LOAD_SENSITIVE: DesignKind[] = ['app', 'sql', 'nosql', 'storage'];
+const LOAD_SENSITIVE: DesignKind[] = ['app', 'auth', 'search', 'sql', 'nosql', 'storage'];
 
 function nodeById(state: DesignState, id: string) {
   return state.nodes.find((n) => n.id === id);
@@ -126,6 +131,21 @@ export function simulateTraffic(state: DesignState): DesignResult {
   const cacheEffective = hasCache && readRatio >= 0.5;
   if (hasCache && readRatio < 0.5) {
     notes.push('Write-heavy traffic — the cache helps reads but most requests still hit durable storage.');
+  }
+  if (kinds.includes('dns')) {
+    notes.push('DNS resolves the edge address first (~2ms, usually cached).');
+  }
+  if (kinds.includes('waf')) {
+    notes.push('WAF filters malicious traffic at the edge (~3ms).');
+  }
+  if (kinds.includes('auth')) {
+    notes.push('Auth service validates tokens on the request path (~10ms).');
+  }
+  if (kinds.includes('search')) {
+    notes.push('Search index serves full-text reads (~12ms).');
+  }
+  if (kinds.includes('ratelimit') && qps >= 5000) {
+    notes.push('Traffic exceeds typical quota — expect 429s without more capacity.');
   }
 
   const contributions = new Map<DesignKind, number>();
