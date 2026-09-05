@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -10,6 +10,8 @@ import {
   Position,
   MarkerType,
   useReactFlow,
+  useNodesState,
+  useEdgesState,
   type Edge,
   type Node,
   type NodeProps,
@@ -21,7 +23,7 @@ import { ProgressProvider, useProgressContext } from './ProgressProvider';
 import type { SkillSummary } from '../../lib/skills';
 import type { ProgressStatus } from '../../lib/progress';
 import { useTheme } from '../../lib/theme';
-import { CATEGORY_COLORS, categoryColor } from '../../lib/skillGraph';
+import { CATEGORY_COLORS, buildNeighborhood, categoryColor } from '../../lib/skillGraph';
 
 const NODE_WIDTH = 200;
 const NODE_HEIGHT = 64;
@@ -81,14 +83,14 @@ interface SkillTreeProps {
 function SkillTreeContent({ skills }: SkillTreeProps) {
   const { getStatus, clearProgress } = useProgressContext();
   const theme = useTheme();
-  const { setEdges } = useReactFlow();
+  const { setCenter, flowToScreenPosition, getNode } = useReactFlow();
 
   const deriveStatus = useCallback(
     (skill: SkillSummary): ProgressStatus => getStatus(skill.id),
     [getStatus],
   );
 
-  const { nodes, edges } = useMemo(() => {
+  const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     const g = new Graph();
     g.setGraph({ rankdir: 'TB', nodesep: 110, ranksep: 150, edgesep: 30, marginx: 40, marginy: 40 });
     g.setDefaultEdgeLabel(() => ({}));
@@ -126,8 +128,60 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
     return { nodes: nodeList, edges: edgeList };
   }, [skills, deriveStatus]);
 
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Re-sync when underlying skill data or progress changes.
+  useEffect(() => {
+    setNodes(initialNodes);
+    setEdges(initialEdges);
+  }, [initialNodes, initialEdges, setNodes, setEdges]);
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const colorById = useMemo(
+    () => new Map(skills.map((s) => [s.id, categoryColor(s.category)])),
+    [skills],
+  );
+
+  const neighborhood = useMemo(
+    () => (selectedId ? buildNeighborhood(skills, selectedId) : null),
+    [skills, selectedId],
+  );
+
+  // Dim everything outside the selected neighborhood; light the neighborhood.
+  useEffect(() => {
+    setNodes((ns) =>
+      ns.map((n) => ({
+        ...n,
+        style: { opacity: !neighborhood || neighborhood.has(n.id) ? 1 : 0.15 },
+      })),
+    );
+    setEdges((es) =>
+      es.map((e) => {
+        const lit = !neighborhood || (neighborhood.has(e.source) && neighborhood.has(e.target));
+        const col = colorById.get(e.target) ?? '#a1a1aa';
+        return {
+          ...e,
+          style: { stroke: lit ? col : '#3f3f46', strokeWidth: lit ? 2.5 : 1, opacity: lit ? 1 : 0.25 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: lit ? col : '#3f3f46' },
+        };
+      }),
+    );
+  }, [neighborhood, colorById, setNodes, setEdges]);
+
+  const [, setViewportTick] = useState(0);
+
   const onNodeClick = useCallback((_: MouseEvent, node: Node) => {
+    setSelectedId(node.id);
+  }, []);
+
+  const onNodeDoubleClick = useCallback((_: MouseEvent, node: Node) => {
     window.location.href = `/skill/${node.id}`;
+  }, []);
+
+  const onPaneClick = useCallback(() => {
+    setSelectedId(null);
   }, []);
 
   const onNodeMouseEnter = useCallback(
@@ -149,12 +203,17 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
   return (
     <div className="h-full w-full">
        <ReactFlow
-        defaultNodes={nodes}
-        defaultEdges={edges}
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         onNodeClick={onNodeClick}
+        onNodeDoubleClick={onNodeDoubleClick}
+        onPaneClick={onPaneClick}
         onNodeMouseEnter={onNodeMouseEnter}
         onNodeMouseLeave={onNodeMouseLeave}
+        onMove={() => setViewportTick((t) => t + 1)}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.2}
@@ -182,6 +241,42 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
           maskColor={theme === 'dark' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)'}
         />
       </ReactFlow>
+      {selectedId &&
+        (() => {
+          const node = getNode(selectedId);
+          const skill = skills.find((s) => s.id === selectedId);
+          if (!node || !skill) return null;
+          const anchor = flowToScreenPosition({
+            x: node.position.x + NODE_WIDTH / 2,
+            y: node.position.y,
+          });
+          return (
+            <div
+              className="absolute z-20 w-64 -translate-x-1/2 -translate-y-full rounded-lg border border-zinc-200 bg-white p-3 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
+              style={{ left: anchor.x, top: anchor.y - 12 }}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{skill.title}</div>
+                  <div className="mt-0.5 text-xs text-zinc-500">{skill.category}</div>
+                </div>
+                <button
+                  onClick={() => setSelectedId(null)}
+                  aria-label="Close"
+                  className="rounded px-1.5 py-0.5 text-xs text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
+                >
+                  ✕
+                </button>
+              </div>
+              <a
+                href={`/skill/${skill.id}`}
+                className="mt-2 inline-flex items-center gap-1 rounded bg-sky-600 px-3 py-1 text-xs font-semibold text-white hover:bg-sky-500"
+              >
+                Open →
+              </a>
+            </div>
+          );
+        })()}
       <div className="absolute right-4 top-4 z-10 flex flex-col items-end gap-2">
         <div className="flex flex-wrap justify-end gap-2 rounded bg-white/80 p-2 dark:bg-zinc-900/80">
           {[
