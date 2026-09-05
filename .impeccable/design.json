@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-29T00:00:00.000Z",
+  "title": "Design System: Backend Roadmap",
+  "extensions": {
+    "colorMeta": {
+      "paper": { "role": "neutral", "displayName": "Paper", "canonical": "#ffffff", "tonalRamp": ["#fafafa", "#f4f4f5", "#e4e4e7", "#d4d4d8", "#a1a1aa", "#71717a", "#3f3f46", "#18181b"] },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "#09090b", "tonalRamp": ["#fafafa", "#f4f4f5", "#e4e4e7", "#d4d4d8", "#a1a1aa", "#71717a", "#3f3f46", "#18181b"] },
+      "surface": { "role": "neutral", "displayName": "Surface", "canonical": "#f4f4f5", "tonalRamp": ["#fafafa", "#f4f4f5", "#e4e4e7", "#d4d4d8", "#a1a1aa", "#71717a", "#3f3f46", "#18181b"] },
+      "surface-deep": { "role": "neutral", "displayName": "Surface Deep", "canonical": "#18181b", "tonalRamp": ["#fafafa", "#f4f4f5", "#e4e4e7", "#d4d4d8", "#a1a1aa", "#71717a", "#3f3f46", "#18181b"] },
+      "hairline": { "role": "neutral", "displayName": "Hairline", "canonical": "#e4e4e7", "tonalRamp": ["#fafafa", "#f4f4f5", "#e4e4e7", "#d4d4d8", "#a1a1aa", "#71717a", "#3f3f46", "#18181b"] },
+      "hairline-deep": { "role": "neutral", "displayName": "Hairline Deep", "canonical": "#27272a", "tonalRamp": ["#fafafa", "#f4f4f5", "#e4e4e7", "#d4d4d8", "#a1a1aa", "#71717a", "#3f3f46", "#18181b"] },
+      "graphite": { "role": "neutral", "displayName": "Graphite", "canonical": "#3f3f46", "tonalRamp": ["#fafafa", "#f4f4f5", "#e4e4e7", "#d4d4d8", "#a1a1aa", "#71717a", "#3f3f46", "#18181b"] },
+      "graphite-muted": { "role": "neutral", "displayName": "Graphite Muted", "canonical": "#71717a", "tonalRamp": ["#fafafa", "#f4f4f5", "#e4e4e7", "#d4d4d8", "#a1a1aa", "#71717a", "#3f3f46", "#18181b"] },
+      "ink-text": { "role": "neutral", "displayName": "Ink Text", "canonical": "#18181b", "tonalRamp": ["#fafafa", "#f4f4f5", "#e4e4e7", "#d4d4d8", "#a1a1aa", "#71717a", "#3f3f46", "#18181b"] },
+      "paper-text": { "role": "neutral", "displayName": "Paper Text", "canonical": "#f4f4f5", "tonalRamp": ["#fafafa", "#f4f4f5", "#e4e4e7", "#d4d4d8", "#a1a1aa", "#71717a", "#3f3f46", "#18181b"] },
+      "signal-blue": { "role": "primary", "displayName": "Signal Blue", "canonical": "#0ea5e9", "tonalRamp": ["#e0f2fe", "#bae6fd", "#7dd3fc", "#38bdf8", "#0ea5e9", "#0284c7", "#0369a1", "#075985"] },
+      "signal-blue-deep": { "role": "primary", "displayName": "Signal Blue Deep", "canonical": "#0284c7", "tonalRamp": ["#e0f2fe", "#bae6fd", "#7dd3fc", "#38bdf8", "#0ea5e9", "#0284c7", "#0369a1", "#075985"] },
+      "success": { "role": "secondary", "displayName": "Success", "canonical": "#10b981", "tonalRamp": ["#d1fae5", "#a7f3d0", "#6ee7b7", "#34d399", "#10b981", "#059669", "#047857", "#065f46"] },
+      "success-deep": { "role": "secondary", "displayName": "Success Deep", "canonical": "#059669", "tonalRamp": ["#d1fae5", "#a7f3d0", "#6ee7b7", "#34d399", "#10b981", "#059669", "#047857", "#065f46"] },
+      "caution": { "role": "tertiary", "displayName": "Caution", "canonical": "#f59e0b", "tonalRamp": ["#fef3c7", "#fde68a", "#fcd34d", "#fbbf24", "#f59e0b", "#d97706", "#b45309", "#92400e"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page and skill titles." },
+      "body": { "displayName": "Body", "purpose": "Prose explanations in the reading pane." },
+      "label": { "displayName": "Label", "purpose": "Category chips, status badges, Output caption." },
+      "mono": { "displayName": "Mono", "purpose": "Code editor and execution output only." }
+    },
+    "shadows": [
+      { "name": "node-lift", "value": "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)", "purpose": "Soft lift applied only to skill-graph node cards in both themes." }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0, 0, 0.2, 1)", "purpose": "Default transition for hover/state changes on buttons, chips, and nodes (Tailwind default duration ~150ms)." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button (Run / Mark complete)",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Filled Success Emerald deep; the primary action on the playground.",
+      "html": "<button class=\"ds-btn-primary\">Run</button>",
+      "css": ".ds-btn-primary { background: #059669; color: #ffffff; padding: 8px 16px; border: none; border-radius: 4px; font: 500 0.75rem/1.2 ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: background 150ms cubic-bezier(0,0,0.2,1); } .ds-btn-primary:hover { background: #10b981; } .ds-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Ghost Button (Reset / inactive language)",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Neutral surface button for secondary actions.",
+      "html": "<button class=\"ds-btn-ghost\">Reset</button>",
+      "css": ".ds-btn-ghost { background: #f4f4f5; color: #71717a; padding: 8px 16px; border: none; border-radius: 4px; font: 500 0.75rem/1.2 ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: background 150ms cubic-bezier(0,0,0.2,1); } .ds-btn-ghost:hover { background: #e4e4e7; }"
+    },
+    {
+      "name": "Active Language Tab",
+      "kind": "button",
+      "refersTo": "button-active",
+      "description": "Filled Signal Blue deep; marks the selected code language.",
+      "html": "<button class=\"ds-btn-active\">Go</button>",
+      "css": ".ds-btn-active { background: #0284c7; color: #ffffff; padding: 8px 16px; border: none; border-radius: 4px; font: 500 0.75rem/1.2 ui-sans-serif, system-ui, sans-serif; cursor: pointer; }"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": "chip-status",
+      "description": "Category or status badge; status variants add a 2px signal-colored border.",
+      "html": "<span class=\"ds-chip\">BACKEND</span>",
+      "css": ".ds-chip { display: inline-block; background: #18181b; color: #f4f4f5; padding: 2px 8px; border-radius: 4px; font: 500 0.75rem/1.2 ui-sans-serif, system-ui, sans-serif; letter-spacing: 0.05em; text-transform: uppercase; }"
+    },
+    {
+      "name": "Skill Node Card",
+      "kind": "card",
+      "refersTo": "button-primary",
+      "description": "The signature wayfinding unit: 200x64 rounded card with a 2px status ring and top/bottom handles.",
+      "html": "<div class=\"ds-node\"><span class=\"ds-node-title\">REST APIs</span><span class=\"ds-node-cat\">APIs</span></div>",
+      "css": ".ds-node { width: 200px; box-sizing: border-box; background: #ffffff; border: 2px solid rgba(14,165,233,0.6); border-radius: 8px; padding: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1); cursor: pointer; transition: border-color 150ms cubic-bezier(0,0,0.2,1); } .ds-node:hover { border-color: #71717a; } .ds-node-title { display: block; font: 600 0.875rem/1.2 ui-sans-serif, system-ui, sans-serif; color: #18181b; } .ds-node-cat { display: block; margin-top: 4px; font: 400 0.75rem/1.2 ui-sans-serif, system-ui, sans-serif; color: #71717a; }"
+    },
+    {
+      "name": "Header Navigation",
+      "kind": "nav",
+      "refersTo": "button-primary",
+      "description": "Top bar: title left, theme toggle right; skill page adds a 'Roadmap' back link.",
+      "html": "<header class=\"ds-header\"><a class=\"ds-link\" href=\"/\">← Roadmap</a><strong class=\"ds-title\">REST APIs</strong></header>",
+      "css": ".ds-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; border-bottom: 1px solid #e4e4e7; } .ds-title { font: 700 1.25rem/1.2 ui-sans-serif, system-ui, sans-serif; color: #18181b; } .ds-link { font: 400 0.75rem/1.2 ui-sans-serif, system-ui, sans-serif; color: #71717a; text-decoration: none; } .ds-link:hover { color: #18181b; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Reference Terminal",
+    "overview": "Backend Roadmap is built like a precise man page, not a marketing site. Every element earns its place: the homepage is a navigable skill graph, each skill page is a split reference — explanation on the left, a runnable terminal on the right. The personality is calm, neutral, and functional: information-dense but unhurried, with no decorative flourish. Color is reserved for meaning, not mood. The product is for interview preppers who want to read a topic, run real code in Go, Java, TypeScript, or Python, and watch their coverage accumulate — so the interface behaves like a trustworthy instrument, not a splashy course landing.\n\nThe system runs in two equivalent themes (light/dark) that share one logic: a graphite neutral base with three signal colors that mean exactly one thing each. Surfaces are flat at rest; depth comes from tonal layering (page → panel → control), not from heavy shadows. Type is the platform default sans for UI and a mono stack for code, so the only 'voice' is structure and signal.",
+    "keyCharacteristics": [
+      "Neutral graphite base in light and dark; no brand hue, only signal accents.",
+      "Three functional accents — Signal Blue (available / active), Success Emerald (completed / run), Caution Amber (in progress) — used solely as status, never decoration.",
+      "Flat-by-default surfaces; depth through tonal steps, with a single soft shadow reserved for the skill-graph nodes.",
+      "Dual-pane 'reference terminal' layout: prose left, code right; full-viewport, no scrolling chrome.",
+      "Two themes, one logic; theme choice persists and defaults to OS preference."
+    ],
+    "rules": [
+      { "name": "The Signal Coding Rule", "body": "The three accents mean exactly one thing — status or the primary action. They are never used for decoration, illustration, or emphasis on non-stateful elements.", "section": "colors" },
+      { "name": "The No Hue Rule", "body": "Outside the three signals, the palette is strictly graphite. Introducing a fourth chromatic color breaks the system and must be rejected unless it maps to a new, documented status.", "section": "colors" },
+      { "name": "The Mono Is Truth Rule", "body": "Anything produced by or typed into the system is set in mono; everything the system says is set in sans. The face alone tells the reader what is machine versus narrative.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Surfaces are flat at rest. Shadow appears only on the skill-graph nodes as a response to being a distinct, clickable object — never on panels, buttons, or chips.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use Signal Blue, Success Emerald, and Caution Amber only for status or the primary action.",
+      "Do keep surfaces flat; reserve shadow-lg for skill-graph nodes alone.",
+      "Do set all machine output (editor, stdout, stderr) in mono and all narrative in the system sans.",
+      "Do honor both themes with one logic; never hardcode a color that breaks in the opposite theme."
+    ],
+    "donts": [
+      "Don't introduce a fourth chromatic color for decoration or emphasis.",
+      "Don't add shadows, gradients, or decorative imagery to panels, buttons, or chips.",
+      "Don't use a custom display typeface; the neutral system sans is the committed voice.",
+      "Don't let the graph or panes scroll the page chrome — both surfaces are full-viewport and internally scrollable only."
+    ]
+  }
+}
