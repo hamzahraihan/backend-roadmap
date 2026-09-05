@@ -3,6 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import CodePlayground from '../../components/react/CodePlayground.tsx';
 import SimulationStage from '../../components/react/SimulationStage.tsx';
 import GitSimulation from '../../components/react/GitSimulation.tsx';
+import PipelineSimulation from '../../components/react/PipelineSimulation.tsx';
 import SplitShell from '../../components/SplitShell.astro';
 import TopBar from '../../components/TopBar.astro';
 import { getCollection, render } from 'astro:content';
@@ -24,7 +25,8 @@ const starterCode = Object.fromEntries(
   languages.map((lang) => [lang, skill.data.starterCode[lang] ?? '']),
 ) as Record<SupportedLanguage, string>;
 
-const isGitSimulation = skill.data.simulation === 'git' || ['version-control','git-fundamentals','git-branching','git-remotes','github-workflow','cicd'].includes(skill.id);
+const isGitSimulation = skill.data.simulation === 'git' || ['version-control','git-fundamentals','git-branching','git-remotes','github-workflow'].includes(skill.id);
+const isPipelineSimulation = skill.data.simulation === 'pipeline' || skill.id === 'cicd';
 const isDesignSimulation = skill.data.simulation === 'design';
 ---
 
@@ -37,7 +39,7 @@ const isDesignSimulation = skill.data.simulation === 'design';
           <Content />
         </article>
         <section slot="right" class="flex min-h-0 h-full flex-col border-t border-zinc-200 dark:border-zinc-800 lg:border-l lg:border-t-0">
-          {isGitSimulation ? <GitSimulation client:load skillId={skill.id} /> : isDesignSimulation ? <SimulationStage client:load skillId={skill.id} layout="panel" /> : <CodePlayground client:load skillId={skill.id} starterCode={starterCode} />}
+          {isGitSimulation ? <GitSimulation client:load skillId={skill.id} /> : isPipelineSimulation ? <PipelineSimulation client:load skillId={skill.id} /> : isDesignSimulation ? <SimulationStage client:load skillId={skill.id} layout="panel" /> : <CodePlayground client:load skillId={skill.id} starterCode={starterCode} />}
         </section>
       </SplitShell>
     </div>

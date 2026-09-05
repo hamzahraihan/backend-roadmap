@@ -24,7 +24,7 @@ const skills = defineCollection({
       })
       .partial()
       .default({}),
-    simulation: z.enum(['code', 'git', 'design']).default('code'),
+    simulation: z.enum(['code', 'git', 'design', 'pipeline']).default('code'),
     designPreset: z.string().optional(),
     gitPreset: z.string().optional(),
   }),

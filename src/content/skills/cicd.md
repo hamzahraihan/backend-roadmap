@@ -3,7 +3,7 @@ title: CI/CD Pipelines
 category: Quality
 order: 35
 dependsOn: [github-workflow, testing-cicd]
-simulation: git
+simulation: pipeline
 starterCode:
   go: |
     // CI: every push runs build + tests.
@@ -96,6 +96,10 @@ approval before prod deploy).
 A mature pipeline runs: lint → typecheck → unit tests → build → integration
 tests → security scan → deploy. Fail fast: if lint fails, don't bother running
 the rest.
+
+## Try it (right pane)
+
+Run the pipeline terminal: `pipe status`, `pipe run`, `pipe retry test`, `pipe run`, `pipe run`. The test stage flakes once by design — retry it, then deploy to staging.
 
 ## Resources
 
