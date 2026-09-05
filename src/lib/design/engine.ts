@@ -93,7 +93,7 @@ export function validateTopology(state: DesignState): string[] {
   const errors: string[] = [];
   if (countKind(state, 'client') === 0) errors.push('Add a Client — every request path starts there.');
   const sinks = state.nodes.filter((n) => SINK_KINDS.includes(n.kind));
-  if (sinks.length === 0) errors.push('Add a data sink (SQL, NoSQL, or Storage) — requests must land somewhere durable.');
+  if (sinks.length === 0) errors.push('Add a data sink (SQL, NoSQL, Storage, or Search Index) — requests must land somewhere durable.');
   const connected = new Set<string>();
   for (const e of state.edges) {
     connected.add(e.from);
