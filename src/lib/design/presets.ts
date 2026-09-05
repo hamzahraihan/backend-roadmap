@@ -16,7 +16,7 @@ function chainOk(state: DesignState): boolean {
   return hasPath(state, ['client'], SINK_KINDS);
 }
 
-const FULL: DesignKind[] = ['client', 'cdn', 'lb', 'gateway', 'app', 'cache', 'sql', 'nosql', 'queue', 'storage'];
+const FULL: DesignKind[] = ['client', 'dns', 'cdn', 'waf', 'lb', 'gateway', 'ratelimit', 'auth', 'app', 'cache', 'search', 'sql', 'nosql', 'queue', 'storage'];
 
 function preset(
   id: string,
