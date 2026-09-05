@@ -150,6 +150,26 @@ const PRESETS: DesignPreset[] = [
     (s, r) => chainOk(s) && kindsPresent(s, ['lb']) && r.p99Ms > 0 && s.scenario.failedKind !== null,
   ),
   preset(
+    'docker-containers',
+    ['client', 'app', 'cache', 'sql'],
+    ['client', 'app', 'sql'],
+    'Containerize the service',
+    'One container is a single point of failure. Put a cache in front of SQL or add a second app replica, then run — failure injection (stop/start) is your chaos control.',
+    'Add Cache between App and SQL (or a second App), then Run.',
+    'Container-resilient — no single container sinks the path.',
+    (s) => chainOk(s) && kindsPresent(s, ['app']) && (countKind(s, 'app') >= 2 || countKind(s, 'cache') >= 1),
+  ),
+  preset(
+    'kubernetes-basics',
+    ['client', 'lb', 'app', 'sql'],
+    ['client', 'lb', 'app', 'sql'],
+    'Declare the deployment',
+    'Desired state: a Service fronts replicated pods over a durable sink. Run at least two app replicas behind the LB with a full client-to-sink path.',
+    'Add a second App Server, wire Client → LB → both apps → SQL, then Run.',
+    'Deployed — service fronts healthy replicas.',
+    (s) => hasPath(s, ['client'], ['lb']) && hasPath(s, ['lb'], ['app']) && countKind(s, 'app') >= 2 && chainOk(s),
+  ),
+  preset(
     'free',
     FULL,
     ['client', 'app', 'sql'],
@@ -175,6 +195,8 @@ const SLOS: Record<string, RunSLO> = {
   'rate-limiting-url-shortener': { p99LtMs: 250, minCompleted: 100 },
   'realtime-rides-feed': { errLtPct: 5, minCompleted: 100 },
   'interview-framework': { p99LtMs: 400, errLtPct: 10, minCompleted: 150 },
+  'docker-containers': { errLtPct: 5, minCompleted: 50 },
+  'kubernetes-basics': { errLtPct: 5, minCompleted: 100 },
   free: {},
 };
 
