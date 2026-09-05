@@ -1,10 +1,15 @@
 export const DESIGN_KINDS = [
   'client',
+  'dns',
   'cdn',
+  'waf',
   'lb',
   'gateway',
+  'ratelimit',
+  'auth',
   'app',
   'cache',
+  'search',
   'sql',
   'nosql',
   'queue',
@@ -15,18 +20,23 @@ export type DesignKind = (typeof DESIGN_KINDS)[number];
 
 export const DESIGN_KIND_LABELS: Record<DesignKind, string> = {
   client: 'Client',
+  dns: 'DNS',
   cdn: 'CDN',
+  waf: 'WAF',
   lb: 'Load Balancer',
   gateway: 'API Gateway',
+  ratelimit: 'Rate Limiter',
+  auth: 'Auth Service',
   app: 'App Server',
   cache: 'Cache',
+  search: 'Search Index',
   sql: 'SQL DB',
   nosql: 'NoSQL DB',
-  queue: 'Queue',
-  storage: 'Blob Storage',
+  queue: 'Message Queue',
+  storage: 'Object Storage',
 };
 
-export const SINK_KINDS: DesignKind[] = ['sql', 'nosql', 'storage'];
+export const SINK_KINDS: DesignKind[] = ['sql', 'nosql', 'storage', 'search'];
 
 export interface DesignNode {
   id: string;
