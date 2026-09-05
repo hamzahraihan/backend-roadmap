@@ -47,7 +47,7 @@ and `validateTopology` are kind-generic — no changes.
 
 ## Player (`src/lib/design/player.ts`)
 
-Replace the three hardcoded `['sql', 'nosql', 'storage']` sink lists with
+Replace the two hardcoded `['sql', 'nosql', 'storage']` sink lists with
 the shared `SINK_KINDS` import so search routes, queues, and degrades
 correctly. Mirror `LOAD_SENSITIVE` (`auth`, `search`). `serviceTime`,
 failure penalties, and the cache shortcut are kind-generic — no changes.
