@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { CheckIcon } from '@radix-ui/react-icons';
 import type { GitState, Commit } from '../../lib/git/types';
 
 interface GitGraphProps {
@@ -222,8 +223,8 @@ export default function GitGraph({ state, onCommitClick }: GitGraphProps) {
           <span className="font-medium text-zinc-500">Staging:</span>
           {staged.length === 0 && <span className="text-zinc-400">none staged</span>}
           {staged.map((p) => (
-            <span key={p} className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-emerald-700 dark:text-emerald-300">
-              {p} ✓
+            <span key={p} className="inline-flex items-center gap-1 rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-emerald-700 dark:text-emerald-300">
+              {p} <CheckIcon width={11} height={11} aria-hidden />
             </span>
           ))}
         </div>
