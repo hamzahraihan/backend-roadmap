@@ -194,7 +194,7 @@ function FlowEdge({
             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
             pointerEvents: 'none',
           }}
-          className="flex items-center gap-1"
+            className="absolute flex items-center gap-1"
         >
           <span
             className={`font-mono text-[10px] leading-none [text-shadow:0_0_5px_white] dark:[text-shadow:0_0_5px_#09090b] ${
