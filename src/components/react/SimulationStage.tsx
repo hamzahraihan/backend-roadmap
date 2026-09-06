@@ -8,7 +8,7 @@ import {
   Position,
   MarkerType,
   BaseEdge,
-  getStraightPath,
+  getSmoothStepPath,
   addEdge,
   useEdgesState,
   useNodesState,
@@ -133,14 +133,23 @@ function FlowEdge({
   id,
   sourceX,
   sourceY,
+  sourcePosition,
   targetX,
   targetY,
+  targetPosition,
   markerEnd,
   data,
 }: EdgeProps) {
   const d = (data ?? {}) as FlowEdgeData;
   const flow = Math.min(1, Math.max(0, d.flow ?? 0));
-  const [path] = getStraightPath({ sourceX, sourceY, targetX, targetY });
+  const [path] = getSmoothStepPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  });
   const reduceMotion =
     typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const animated = !reduceMotion && flow > 0.02;
