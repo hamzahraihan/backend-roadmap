@@ -13,6 +13,7 @@ import {
   addEdge,
   useEdgesState,
   useNodesState,
+  useReactFlow,
   useUpdateNodeInternals,
   type Connection,
   type Edge,
@@ -147,8 +148,10 @@ function FlowEdge({
   targetY,
   targetPosition,
   markerEnd,
+  selected,
   data,
 }: EdgeProps) {
+  const { deleteElements } = useReactFlow();
   const d = (data ?? {}) as FlowEdgeData;
   const flow = Math.min(1, Math.max(0, d.flow ?? 0));
   const [path, labelX, labelY] = getSmoothStepPath({
@@ -200,6 +203,20 @@ function FlowEdge({
           >
             {formatRps(rps)}
           </span>
+          {selected && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteElements({ edges: [{ id }] });
+              }}
+              aria-label="Delete connection"
+              title="Delete connection"
+              style={{ pointerEvents: 'auto' }}
+              className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-zinc-600 text-white hover:bg-red-500 dark:bg-zinc-300 dark:text-zinc-900 dark:hover:bg-red-400"
+            >
+              <Cross1Icon width={9} height={9} aria-hidden />
+            </button>
+          )}
         </div>
       </EdgeLabelRenderer>
     </>
