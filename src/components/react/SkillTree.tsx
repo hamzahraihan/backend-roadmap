@@ -291,11 +291,15 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
     setSelectedId(null);
   }, []);
 
-  const onNodeDragStop = useCallback((_: globalThis.MouseEvent | globalThis.TouchEvent, _node: Node, all: Node[]) => {
+  const onNodeDragStop = useCallback((_: globalThis.MouseEvent | globalThis.TouchEvent, _node: Node, dragged: Node[]) => {
+    // NOTE: React Flow passes only the dragged/selected nodes as the third
+    // argument, so the full scene must come from state; dragged positions
+    // win because the state update may lag the event by a frame.
     const map: Record<string, { x: number; y: number }> = {};
-    for (const n of all) map[n.id] = { x: n.position.x, y: n.position.y };
+    for (const n of nodes) map[n.id] = { x: n.position.x, y: n.position.y };
+    for (const n of dragged) map[n.id] = { x: n.position.x, y: n.position.y };
     saveLayout(map);
-  }, []);
+  }, [nodes]);
 
   const onResetLayout = useCallback(() => {
     clearLayout();
