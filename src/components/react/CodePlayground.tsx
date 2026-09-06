@@ -141,8 +141,8 @@ function CodePlaygroundContent({ skillId, starterCode }: CodePlaygroundProps) {
                 </button>
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto bg-zinc-100 px-4 py-2 font-mono text-xs dark:bg-zinc-950">
-                {output && <pre className="whitespace-pre-wrap text-emerald-300">{output}</pre>}
-                {error && <pre className="whitespace-pre-wrap text-red-400">{error}</pre>}
+                {output && <pre className="whitespace-pre-wrap text-emerald-700 dark:text-emerald-300">{output}</pre>}
+                {error && <pre className="whitespace-pre-wrap text-red-600 dark:text-red-400">{error}</pre>}
                 {!output && !error && (
                   <span className="text-zinc-600">
                     Press Run to execute your code via the Wandbox sandbox.
