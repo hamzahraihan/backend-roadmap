@@ -191,11 +191,15 @@ function FlowEdge({
             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
             pointerEvents: 'none',
           }}
-          className={`font-mono text-[10px] leading-none ${
-            rps > 0 ? 'text-sky-600 dark:text-sky-300' : 'text-zinc-500 dark:text-zinc-400'
-          }`}
+          className="flex items-center gap-1"
         >
-          {formatRps(rps)}
+          <span
+            className={`font-mono text-[10px] leading-none [text-shadow:0_0_5px_white] dark:[text-shadow:0_0_5px_#09090b] ${
+              rps > 0 ? 'text-sky-600 dark:text-sky-300' : 'text-zinc-500 dark:text-zinc-400'
+            }`}
+          >
+            {formatRps(rps)}
+          </span>
         </div>
       </EdgeLabelRenderer>
     </>
