@@ -23,7 +23,7 @@ import { ProgressProvider, useProgressContext } from './ProgressProvider';
 import type { SkillSummary } from '../../lib/skills';
 import type { ProgressStatus } from '../../lib/progress';
 import { useTheme } from '../../lib/theme';
-import { loadLayout, saveLayout } from '../../lib/skillLayout';
+import { clearLayout, loadLayout, saveLayout } from '../../lib/skillLayout';
 import { CATEGORY_COLORS, buildNeighborhood, categoryColor } from '../../lib/skillGraph';
 
 const NODE_WIDTH = 200;
@@ -174,7 +174,7 @@ function applyDim(
 function SkillTreeContent({ skills }: SkillTreeProps) {
   const { getStatus, clearProgress } = useProgressContext();
   const theme = useTheme();
-  const { setCenter, flowToScreenPosition, getNode } = useReactFlow();
+  const { setCenter, flowToScreenPosition, getNode, fitView } = useReactFlow();
 
   const deriveStatus = useCallback(
     (skill: SkillSummary): ProgressStatus => getStatus(skill.id),
@@ -296,6 +296,12 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
     for (const n of all) map[n.id] = { x: n.position.x, y: n.position.y };
     saveLayout(map);
   }, []);
+
+  const onResetLayout = useCallback(() => {
+    clearLayout();
+    setLayoutEpoch((e) => e + 1);
+    requestAnimationFrame(() => fitView({ padding: 0.2 }));
+  }, [fitView]);
 
   const onNodeMouseEnter = useCallback(
     (_: MouseEvent, node: Node) => {
@@ -483,6 +489,13 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
             ))}
           </div>
         </details>
+        <button
+          onClick={onResetLayout}
+          className="inline-flex items-center gap-1.5 rounded bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+        >
+          <ResetIcon width={13} height={13} className="shrink-0" aria-hidden />
+          Reset layout
+        </button>
         <button
           onClick={clearProgress}
           className="inline-flex items-center gap-1.5 rounded bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
