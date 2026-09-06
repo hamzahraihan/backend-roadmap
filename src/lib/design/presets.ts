@@ -81,7 +81,7 @@ const PRESETS: DesignPreset[] = [
     'Keep a single sink (SQL or NoSQL), keep Gateway on the path, then Run.',
     'Clean boundary — one owner per entity, policy at the edge.',
     (s) => {
-      const sinks = countKind(s, 'sql') + countKind(s, 'nosql') + countKind(s, 'storage');
+      const sinks = SINK_KINDS.reduce((a, k) => a + countKind(s, k), 0);
       return hasPath(s, ['client'], ['gateway']) && sinks === 1 && chainOk(s);
     },
   ),
