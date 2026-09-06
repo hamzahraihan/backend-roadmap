@@ -212,7 +212,7 @@ function FlowEdge({
               aria-label="Delete connection"
               title="Delete connection"
               style={{ pointerEvents: 'auto' }}
-              className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-zinc-600 text-white hover:bg-red-500 dark:bg-zinc-300 dark:text-zinc-900 dark:hover:bg-red-400"
+              className="nodrag nopan inline-flex h-4 w-4 items-center justify-center rounded-full bg-zinc-600 text-white hover:bg-red-500 dark:bg-zinc-300 dark:text-zinc-900 dark:hover:bg-red-400"
             >
               <Cross1Icon width={9} height={9} aria-hidden />
             </button>
