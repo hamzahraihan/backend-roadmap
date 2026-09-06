@@ -127,9 +127,9 @@ export type FlowEdgeData = {
 };
 
 function formatRps(v: number): string {
-  if (!Number.isFinite(v) || v <= 0) return '0';
-  if (v < 1000) return `${Math.round(v)}`;
-  return `${(v / 1000).toFixed(1)}k`;
+  if (!Number.isFinite(v) || v <= 0) return '0/s';
+  if (v < 1000) return `${Math.round(v)}/s`;
+  return `${(v / 1000).toFixed(1)}k/s`;
 }
 
 /**
@@ -191,10 +191,8 @@ function FlowEdge({
             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
             pointerEvents: 'none',
           }}
-          className={`rounded border px-1.5 py-0.5 font-mono text-[10px] leading-none ${
-            rps > 0
-              ? 'border-sky-500/40 bg-white/90 text-sky-600 dark:bg-zinc-900/90 dark:text-sky-300'
-              : 'border-zinc-200 bg-white/90 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900/90 dark:text-zinc-400'
+          className={`font-mono text-[10px] leading-none ${
+            rps > 0 ? 'text-sky-600 dark:text-sky-300' : 'text-zinc-500 dark:text-zinc-400'
           }`}
         >
           {formatRps(rps)}
