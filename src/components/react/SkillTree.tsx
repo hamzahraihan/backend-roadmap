@@ -23,6 +23,7 @@ import { ProgressProvider, useProgressContext } from './ProgressProvider';
 import type { SkillSummary } from '../../lib/skills';
 import type { ProgressStatus } from '../../lib/progress';
 import { useTheme } from '../../lib/theme';
+import { loadLayout, saveLayout } from '../../lib/skillLayout';
 import { CATEGORY_COLORS, buildNeighborhood, categoryColor } from '../../lib/skillGraph';
 
 const NODE_WIDTH = 200;
@@ -34,9 +35,9 @@ type SkillNodeData = {
 };
 
 const STATUS_STYLES: Record<ProgressStatus, { ring: string; badge: string; label: string }> = {
-  'not-started': { ring: 'border-sky-500/60', badge: 'bg-sky-500/15 text-sky-300', label: 'Available' },
-  'in-progress': { ring: 'border-amber-500/60', badge: 'bg-amber-500/15 text-amber-300', label: 'In progress' },
-  completed: { ring: 'border-emerald-500/60', badge: 'bg-emerald-500/15 text-emerald-300', label: 'Completed' },
+  'not-started': { ring: 'border-sky-500/60', badge: 'bg-sky-500/15 text-sky-700 dark:text-sky-300', label: 'Available' },
+  'in-progress': { ring: 'border-amber-500/60', badge: 'bg-amber-500/15 text-amber-700 dark:text-amber-300', label: 'In progress' },
+  completed: { ring: 'border-emerald-500/60', badge: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300', label: 'Completed' },
 };
 
 function SkillNode({ data }: NodeProps) {
@@ -180,6 +181,8 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
     [getStatus],
   );
 
+  const [layoutEpoch, setLayoutEpoch] = useState(0);
+
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     const g = new Graph();
     g.setGraph({ rankdir: 'TB', nodesep: 110, ranksep: 150, edgesep: 30, marginx: 40, marginy: 40 });
@@ -201,6 +204,12 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
       };
     });
 
+    const saved = loadLayout();
+    const mergedNodes: Node[] = nodeList.map((n) => {
+      const p = saved[n.id];
+      return p ? { ...n, position: { x: p.x, y: p.y } } : n;
+    });
+
     const edgeList: Edge[] = [];
     skills.forEach((s) =>
       s.dependsOn.forEach((dep) => {
@@ -215,8 +224,8 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
       }),
     );
 
-    return { nodes: nodeList, edges: edgeList };
-  }, [skills, deriveStatus]);
+    return { nodes: mergedNodes, edges: edgeList };
+  }, [skills, deriveStatus, layoutEpoch]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -280,6 +289,12 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
 
   const onPaneClick = useCallback(() => {
     setSelectedId(null);
+  }, []);
+
+  const onNodeDragStop = useCallback((_: globalThis.MouseEvent | globalThis.TouchEvent, _node: Node, all: Node[]) => {
+    const map: Record<string, { x: number; y: number }> = {};
+    for (const n of all) map[n.id] = { x: n.position.x, y: n.position.y };
+    saveLayout(map);
   }, []);
 
   const onNodeMouseEnter = useCallback(
@@ -358,6 +373,7 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeDragStop={onNodeDragStop}
         nodeTypes={nodeTypes}
         onNodeClick={onNodeClick}
         onNodeDoubleClick={onNodeDoubleClick}
