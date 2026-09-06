@@ -8,6 +8,7 @@ import {
   Position,
   MarkerType,
   BaseEdge,
+  EdgeLabelRenderer,
   getSmoothStepPath,
   addEdge,
   useEdgesState,
@@ -120,8 +121,16 @@ export type FlowEdgeData = {
   flow?: number;
   /** downstream endpoint is failed/degraded */
   failed?: boolean;
+  /** measured edge crossings per simulated second over the last flush window */
+  rps?: number;
   [key: string]: unknown;
 };
+
+function formatRps(v: number): string {
+  if (!Number.isFinite(v) || v <= 0) return '0';
+  if (v < 1000) return `${Math.round(v)}`;
+  return `${(v / 1000).toFixed(1)}k`;
+}
 
 /**
  * In-viewport flow edge. All geometry comes from React Flow's own edge props,
@@ -142,7 +151,7 @@ function FlowEdge({
 }: EdgeProps) {
   const d = (data ?? {}) as FlowEdgeData;
   const flow = Math.min(1, Math.max(0, d.flow ?? 0));
-  const [path] = getSmoothStepPath({
+  const [path, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
     sourcePosition,
@@ -150,6 +159,7 @@ function FlowEdge({
     targetY,
     targetPosition,
   });
+  const rps = d.rps ?? 0;
   const reduceMotion =
     typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const animated = !reduceMotion && flow > 0.02;
@@ -175,6 +185,21 @@ function FlowEdge({
           <animateMotion dur={`${dur}s`} begin={`${begin}s`} repeatCount="indefinite" path={path} />
         </circle>
       ))}
+      <EdgeLabelRenderer>
+        <div
+          style={{
+            transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+            pointerEvents: 'none',
+          }}
+          className={`rounded border px-1.5 py-0.5 font-mono text-[10px] leading-none ${
+            rps > 0
+              ? 'border-sky-500/40 bg-white/90 text-sky-600 dark:bg-zinc-900/90 dark:text-sky-300'
+              : 'border-zinc-200 bg-white/90 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900/90 dark:text-zinc-400'
+          }`}
+        >
+          {formatRps(rps)}
+        </div>
+      </EdgeLabelRenderer>
     </>
   );
 }
@@ -255,6 +280,7 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
   const suppressedRef = useRef(0);
   const hopSampleRef = useRef(0);
   const lastTraceIdRef = useRef(0);
+  const lastRpsSimRef = useRef(0);
   const nodesRef = useRef<Node[]>([]);
   const logRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -340,7 +366,7 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
       setInspectId('');
       pushLog([`${reason} — run restarted.`]);
       setNodes((nds) => nds.map((n) => ({ ...n, data: { ...n.data, bottleneck: false, failed: false, queued: 0 } })));
-      setEdges((eds) => eds.map((e) => ({ ...e, data: { ...((e.data ?? {}) as FlowEdgeData), flow: 0, failed: false } })));
+      setEdges((eds) => eds.map((e) => ({ ...e, data: { ...((e.data ?? {}) as FlowEdgeData), flow: 0, failed: false, rps: 0 } })));
     },
     [pushLog, setNodes, setEdges],
   );
@@ -400,6 +426,7 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
         setSpark((p) => [...p.slice(-39), summary.p99Ms]);
         const bottleneck = summary.bottleneck;
         const counts = new Map<string, number>();
+        const trips = new Map<string, number>();
         for (const p of snap.inFlight) counts.set(`${p.fromId}→${p.toId}`, (counts.get(`${p.fromId}→${p.toId}`) ?? 0) + 1);
         // Completion window: instantaneous inFlight systematically misses fast
         // hops (client/LB/gateway service is ~ms, drained within one substep),
@@ -413,17 +440,21 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
           for (let i = 1; i < t.hops.length; i++) {
             const key = `${t.hops[i - 1].nodeId}→${t.hops[i].nodeId}`;
             counts.set(key, (counts.get(key) ?? 0) + 1);
+            trips.set(key, (trips.get(key) ?? 0) + 1);
           }
         }
         lastTraceIdRef.current = maxTraceId;
+        const simElapsed = snap.simSec - lastRpsSimRef.current;
+        lastRpsSimRef.current = snap.simSec;
         const kindById = new Map(nodesRef.current.map((n) => [n.id, (n.data as unknown as CanvasNodeData).kind]));
         setEdges((eds) =>
           eds.map((e) => {
             const flow = Math.min(1, (counts.get(`${e.source}→${e.target}`) ?? 0) / 8);
             const failed = failedRef.current.has(kindById.get(e.target) as DesignKind);
+            const rps = simElapsed > 1e-6 ? (trips.get(`${e.source}→${e.target}`) ?? 0) / simElapsed : 0;
             const prev = (e.data ?? {}) as FlowEdgeData;
-            if (prev.flow === flow && prev.failed === failed) return e;
-            return { ...e, data: { ...prev, flow, failed } };
+            if (prev.flow === flow && prev.failed === failed && prev.rps === rps) return e;
+            return { ...e, data: { ...prev, flow, failed, rps } };
           }),
         );
         setNodes((nds) =>
@@ -526,7 +557,7 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
       setSpark([]);
       setHasWon(false);
       setPhase('idle');
-      setEdges((eds) => eds.map((e) => ({ ...e, data: { ...((e.data ?? {}) as FlowEdgeData), flow: 0, failed: false } })));
+      setEdges((eds) => eds.map((e) => ({ ...e, data: { ...((e.data ?? {}) as FlowEdgeData), flow: 0, failed: false, rps: 0 } })));
       pushLog(['Topology edited — press Play to start a fresh run.']);
     }
   }, [phase, pushLog, setEdges]);
@@ -583,7 +614,7 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
   const onConnect = useCallback(
     (c: Connection) => {
       if (!c.source || !c.target || c.source === c.target) return;
-      setEdges((eds) => addEdge({ ...c, type: 'flow', data: { flow: 0, failed: false } satisfies FlowEdgeData, markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: '#71717a', strokeWidth: 2.5 } }, eds));
+      setEdges((eds) => addEdge({ ...c, type: 'flow', data: { flow: 0, failed: false, rps: 0 } satisfies FlowEdgeData, markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: '#71717a', strokeWidth: 2.5 } }, eds));
       touchTopology();
     },
     [setEdges, touchTopology],
