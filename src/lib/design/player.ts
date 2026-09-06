@@ -74,7 +74,7 @@ export interface RunHandle {
   tick(dtSec: number): RunEvent[];
   trigger(ev: SimTrigger): RunEvent[];
   retune(qps: number, readRatio: number): void;
-  snapshot(): { simSec: number; loads: Record<string, NodeLoad>; inFlight: InFlightPacket[] };
+  snapshot(): { simSec: number; loads: Record<string, NodeLoad>; queueByNode: Record<string, number>; inFlight: InFlightPacket[] };
   summarize(): RunSummary;
   traces(): RequestTrace[];
 }
@@ -408,7 +408,12 @@ export function createRun(topo: PlayerTopology, opts: PlayerOpts): RunHandle {
       }
       const out: Record<string, NodeLoad> = {};
       for (const [k, v] of loads) out[k] = { ...v };
-      return { simSec, loads: out, inFlight };
+      // Per-node queue depths: `loads` is keyed by kind (shared across
+      // same-kind nodes), but the canvas renders one bar per node, so each
+      // node needs its own depth. Nodes with no traffic report 0.
+      const queueByNode: Record<string, number> = {};
+      for (const n of topo.nodes) queueByNode[n.id] = queues.get(n.id)?.length ?? 0;
+      return { simSec, loads: out, queueByNode, inFlight };
     },
     summarize(): RunSummary {
       const sorted = [...latencies].sort((a, b) => a - b);

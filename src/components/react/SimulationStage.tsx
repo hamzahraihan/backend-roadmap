@@ -420,12 +420,11 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
         setNodes((nds) =>
           nds.map((n) => {
             const d = n.data as unknown as CanvasNodeData;
-            const load = summary.loadByKind[d.kind];
             return {
               ...n,
               data: {
                 ...n.data,
-                queued: load ? load.queue : 0,
+                queued: snap.queueByNode[n.id] ?? 0,
                 failed: failedRef.current.has(d.kind),
                 bottleneck: bottleneck !== '—' && d.kind !== 'client' && DESIGN_KIND_LABELS[d.kind] === bottleneck,
               },
@@ -757,9 +756,9 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
                   <span className="font-mono text-xs text-zinc-500">{fmtClock(clock)} · {speed}×</span>
                 </div>
                 <div className="mt-1 grid grid-cols-3 gap-2 font-mono text-center">
-                  <div className="rounded bg-zinc-50 px-1 py-1.5 dark:bg-zinc-950"><div className="flex items-center justify-center gap-1 text-[10px] text-zinc-500"><TimerIcon width={11} height={11} aria-hidden />p99</div><div className="text-sm text-emerald-400">{metrics ? `${metrics.p99Ms}ms` : '—'}</div></div>
-                  <div className="rounded bg-zinc-50 px-1 py-1.5 dark:bg-zinc-950"><div className="flex items-center justify-center gap-1 text-[10px] text-zinc-500"><ExclamationTriangleIcon width={11} height={11} aria-hidden />errors</div><div className={`text-sm ${metrics && metrics.errPct > 5 ? 'text-red-400' : 'text-zinc-200'}`}>{metrics ? `${metrics.errPct}%` : '—'}</div></div>
-                  <div className="rounded bg-zinc-50 px-1 py-1.5 dark:bg-zinc-950"><div className="flex items-center justify-center gap-1 text-[10px] text-zinc-500"><ActivityLogIcon width={11} height={11} aria-hidden />rps</div><div className="text-sm text-sky-400">{metrics ? metrics.rps : '—'}</div></div>
+                  <div className="rounded bg-zinc-50 px-1 py-1.5 dark:bg-zinc-950"><div className="flex items-center justify-center gap-1 text-[10px] text-zinc-500"><TimerIcon width={11} height={11} aria-hidden />p99</div><div className="text-sm text-emerald-600 dark:text-emerald-400">{metrics ? `${metrics.p99Ms}ms` : '—'}</div></div>
+                  <div className="rounded bg-zinc-50 px-1 py-1.5 dark:bg-zinc-950"><div className="flex items-center justify-center gap-1 text-[10px] text-zinc-500"><ExclamationTriangleIcon width={11} height={11} aria-hidden />errors</div><div className={`text-sm ${metrics && metrics.errPct > 5 ? 'text-red-600 dark:text-red-400' : 'text-zinc-500 dark:text-zinc-200'}`}>{metrics ? `${metrics.errPct}%` : '—'}</div></div>
+                  <div className="rounded bg-zinc-50 px-1 py-1.5 dark:bg-zinc-950"><div className="flex items-center justify-center gap-1 text-[10px] text-zinc-500"><ActivityLogIcon width={11} height={11} aria-hidden />rps</div><div className="text-sm text-sky-600 dark:text-sky-400">{metrics ? metrics.rps : '—'}</div></div>
                 </div>
                 <div className="mt-2 flex h-8 items-end gap-[2px]" aria-hidden>
                   {spark.map((v, i) => (
@@ -790,9 +789,9 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
                 {inspected && (
                   <ol className="mt-2 space-y-0.5 font-mono text-[11px] leading-4">
                     {inspected.hops.map((h, i) => (
-                      <li key={i} className="text-zinc-300"><span className="text-sky-400">{i + 1}.</span> {h.nodeId} <span className="text-zinc-500">+{Math.round((h.departed - h.arrived) * 1000)}ms</span></li>
+                      <li key={i} className="text-zinc-700 dark:text-zinc-300"><span className="text-sky-600 dark:text-sky-400">{i + 1}.</span> {h.nodeId} <span className="text-zinc-500">+{Math.round((h.departed - h.arrived) * 1000)}ms</span></li>
                     ))}
-                    <li className="pt-1 text-emerald-300">= {inspected.latencyMs}ms total{inspected.hit ? ' (cache hit)' : ''}{inspected.error ? ` — ${inspected.error}` : ''}</li>
+                    <li className="pt-1 text-emerald-700 dark:text-emerald-300">= {inspected.latencyMs}ms total{inspected.hit ? ' (cache hit)' : ''}{inspected.error ? ` — ${inspected.error}` : ''}</li>
                   </ol>
                 )}
               </div>
@@ -801,7 +800,7 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
                 {log.map((line, i) => (
                   <div key={`${i}-${line.slice(0, 12)}`} className={line.startsWith('…') ? 'text-zinc-500' : line.startsWith('Add a') || line.startsWith('Connect') || line.startsWith('No request') || line.startsWith('A connection') ? 'text-red-400' : line.includes('failed') || line.includes('Spike') || line.includes('spike') ? 'text-amber-300' : line.includes('recovered') || line.includes('Objective') ? 'text-emerald-300' : 'text-zinc-300'}>{line}</div>
                 ))}
-                {mode === 'guided' && hasWon && <div className="mt-1 font-sans text-xs font-semibold text-emerald-400">{preset.objective.winMessage}</div>}
+                {mode === 'guided' && hasWon && <div className="mt-1 font-sans text-xs font-semibold text-emerald-600 dark:text-emerald-400">{preset.objective.winMessage}</div>}
               </div>
             </div>
           }
