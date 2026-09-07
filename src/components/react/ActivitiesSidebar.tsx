@@ -1,19 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRightIcon } from '@radix-ui/react-icons';
 import { ProgressProvider, useProgressContext } from './ProgressProvider';
+import { t, useUILocale, type UIStringKey } from '../../lib/i18n';
 import type { SkillSummary } from '../../lib/skills';
 
 type Props = {
   skills: SkillSummary[];
 };
 
-const STATUS_STYLES: Record<string, { dot: string; label: string }> = {
-  'not-started': { dot: 'bg-sky-500/60', label: 'Available' },
-  'in-progress': { dot: 'bg-amber-500/60', label: 'In progress' },
-  completed: { dot: 'bg-emerald-500/60', label: 'Completed' },
+const STATUS_STYLES: Record<string, { dot: string; label: UIStringKey }> = {
+  'not-started': { dot: 'bg-sky-500/60', label: 'available' },
+  'in-progress': { dot: 'bg-amber-500/60', label: 'inProgress' },
+  completed: { dot: 'bg-emerald-500/60', label: 'completed' },
 };
 
 function ActivitiesSidebarInner({ skills }: Props) {
+  const locale = useUILocale();
   const { getStatus } = useProgressContext();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -144,10 +146,10 @@ function ActivitiesSidebarInner({ skills }: Props) {
               <span className="h-1.5 w-1.5 rounded-[2px] bg-zinc-700 dark:bg-zinc-300" />
             </span>
             <h2 id="activities-title" className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-              Activities
+              {t(locale, 'activities')}
             </h2>
             <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-              {filtered.length} skills
+              {filtered.length} {t(locale, 'skillsUnit')}
             </span>
           </div>
           <button
@@ -155,7 +157,7 @@ function ActivitiesSidebarInner({ skills }: Props) {
               setOpen(false);
               window.dispatchEvent(new CustomEvent('activities:close'));
             }}
-            aria-label="Close activities"
+            aria-label={t(locale, 'closeActivities')}
             className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
           >
             <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
@@ -181,7 +183,7 @@ function ActivitiesSidebarInner({ skills }: Props) {
             <input
               ref={searchRef}
               type="search"
-              placeholder="Search — e.g. branching"
+              placeholder={t(locale, 'searchPlaceholder')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="w-full rounded-full border border-zinc-200 bg-zinc-50 py-1.5 pl-8 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500"
@@ -189,7 +191,7 @@ function ActivitiesSidebarInner({ skills }: Props) {
             {query && (
               <button
                 onClick={() => setQuery('')}
-                aria-label="Clear search"
+                aria-label={t(locale, 'clearSearch')}
                 className="absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-200 hover:text-zinc-600 dark:hover:bg-zinc-700"
               >
                 <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -199,7 +201,7 @@ function ActivitiesSidebarInner({ skills }: Props) {
             )}
           </div>
           <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-            Roadmap order • {skills.length} total • <span className="font-mono text-[11px]">order {filtered[0]?.order ?? '-'} → {filtered[filtered.length - 1]?.order ?? '-'}</span>
+            {t(locale, 'roadmapOrder')} • {skills.length} {t(locale, 'total')} • <span className="font-mono text-[11px]">order {filtered[0]?.order ?? '-'} → {filtered[filtered.length - 1]?.order ?? '-'}</span>
           </p>
         </div>
 
@@ -207,13 +209,13 @@ function ActivitiesSidebarInner({ skills }: Props) {
         <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">No matches</p>
-              <p className="mt-1 text-xs text-zinc-500">Try “git”, “api”, or “scale”.</p>
+              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t(locale, 'noMatches')}</p>
+              <p className="mt-1 text-xs text-zinc-500">{t(locale, 'tryExamples')}</p>
               <button
                 onClick={() => setQuery('')}
                 className="mt-3 rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
               >
-                Clear
+                {t(locale, 'clear')}
               </button>
             </div>
           ) : (
@@ -241,7 +243,7 @@ function ActivitiesSidebarInner({ skills }: Props) {
                         <div className="flex items-center gap-2">
                           <span className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{skill.title}</span>
                           {isCurrent && (
-                            <span className="rounded-full bg-sky-500 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">Current</span>
+                            <span className="rounded-full bg-sky-500 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">{t(locale, 'current')}</span>
                           )}
                         </div>
                         <div className="mt-0.5 flex items-center gap-1.5">
@@ -251,7 +253,7 @@ function ActivitiesSidebarInner({ skills }: Props) {
                         </div>
                       </div>
                       <span className="flex shrink-0 items-center gap-1.5">
-                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full border-2 ${style.dot} bg-white dark:bg-zinc-900`} aria-hidden="true" title={style.label} />
+                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full border-2 ${style.dot} bg-white dark:bg-zinc-900`} aria-hidden="true" title={t(locale, style.label)} />
                         <svg
                           viewBox="0 0 16 16"
                           fill="none"
@@ -275,10 +277,10 @@ function ActivitiesSidebarInner({ skills }: Props) {
         <div className="border-t border-zinc-200 px-3 py-2.5 dark:border-zinc-800">
           <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
             <span>
-              {skills.filter((s) => getStatus(s.id) === 'completed').length} / {skills.length} completed
+              {skills.filter((s) => getStatus(s.id) === 'completed').length} / {skills.length} {t(locale, 'completedCount')}
             </span>
             <a href="/" className="inline-flex items-center gap-1 font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100">
-              View graph <ArrowRightIcon width={13} height={13} className="shrink-0" aria-hidden />
+              {t(locale, 'viewGraph')} <ArrowRightIcon width={13} height={13} className="shrink-0" aria-hidden />
             </a>
           </div>
         </div>
