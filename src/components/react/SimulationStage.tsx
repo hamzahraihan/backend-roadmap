@@ -52,6 +52,7 @@ import { timelineFor } from '../../lib/design/timelines';
 import { DESIGN_KIND_LABELS, type DesignKind } from '../../lib/design/types';
 import ResizableSplit from './ResizableSplit';
 import { ProgressProvider, useProgressContext } from './ProgressProvider';
+import { t, useUILocale } from '../../lib/i18n';
 import { useTheme } from '../../lib/theme';
 
 type CanvasNodeData = {
@@ -152,6 +153,7 @@ function FlowEdge({
   data,
 }: EdgeProps) {
   const { deleteElements } = useReactFlow();
+  const locale = useUILocale();
   const d = (data ?? {}) as FlowEdgeData;
   const flow = Math.min(1, Math.max(0, d.flow ?? 0));
   const [path, labelX, labelY] = getSmoothStepPath({
@@ -209,8 +211,8 @@ function FlowEdge({
                 e.stopPropagation();
                 deleteElements({ edges: [{ id }] });
               }}
-              aria-label="Delete connection"
-              title="Delete connection"
+              aria-label={t(locale, 'deleteConnection')}
+              title={t(locale, 'deleteConnection')}
               style={{ pointerEvents: 'auto' }}
               className="nodrag nopan inline-flex h-4 w-4 items-center justify-center rounded-full bg-zinc-600 text-white hover:bg-red-500 dark:bg-zinc-300 dark:text-zinc-900 dark:hover:bg-red-400"
             >
@@ -263,6 +265,7 @@ function toFlowEdges(state: ReturnType<typeof initialStateFor>): Edge[] {
 }
 
 function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStageProps) {
+  const locale = useUILocale();
   const { getStatus, setStatus } = useProgressContext();
   const status = getStatus(skillId);
   const theme = useTheme();
@@ -647,13 +650,13 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
   const objective = mode === 'free' ? getPreset('free').objective : preset.objective;
   const slo = sloFor(preset.id);
 
-  if (!ready) return <div className="flex h-full items-center justify-center text-xs text-zinc-500">Loading simulation…</div>;
+  if (!ready) return <div className="flex h-full items-center justify-center text-xs text-zinc-500">{t(locale, 'loadingSimulation')}</div>;
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-zinc-50 dark:bg-zinc-950">
       {layout === 'studio' && (
-        <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-zinc-200 bg-white px-4 py-2 dark:border-zinc-800 dark:bg-zinc-900" aria-label="Scenario library">
-          <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Scenarios:</span>
+        <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-zinc-200 bg-white px-4 py-2 dark:border-zinc-800 dark:bg-zinc-900" aria-label={t(locale, 'scenarioLibrary')}>
+          <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">{t(locale, 'scenarios')}</span>
           {STUDIO_SCENARIOS.map((s) => (
             <button
               key={s.id}
@@ -675,7 +678,7 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
             <div className="flex items-center gap-2">
               <span className="rounded bg-sky-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">Design Simulation</span>
               <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{objective.title}</span>
-              {hasWon && <span className="inline-flex items-center gap-1 rounded bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white"><CheckIcon width={11} height={11} aria-hidden />Objective met</span>}
+              {hasWon && <span className="inline-flex items-center gap-1 rounded bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white"><CheckIcon width={11} height={11} aria-hidden />{t(locale, 'objectiveMet')}</span>}
               <span className="inline-flex items-center gap-1 font-mono text-xs text-zinc-500"><ClockIcon width={12} height={12} aria-hidden />{fmtClock(clock)}</span>
             </div>
             <p className="mt-1 max-w-[60ch] text-xs leading-5 text-zinc-600 dark:text-zinc-400">{objective.description}</p>
@@ -686,21 +689,21 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
             ].filter(Boolean).join(' • ')}{timelineFor(preset.id).length > 0 ? ' • scripted spike/failure incoming' : ''}</p>}
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
-            <div className="flex overflow-hidden rounded border border-zinc-200 dark:border-zinc-700" role="tablist" aria-label="Canvas direction">
+            <div className="flex overflow-hidden rounded border border-zinc-200 dark:border-zinc-700" role="tablist" aria-label={t(locale, 'canvasDirection')}>
               {(['vertical', 'horizontal'] as const).map((d) => (
                 <button
                   key={d}
                   role="tab"
                   aria-selected={direction === d}
-                  title={d === 'vertical' ? 'Top-down view' : 'Left-to-right view'}
+                  title={t(locale, d === 'vertical' ? 'topDownView' : 'leftRightView')}
                   onClick={() => { if (direction !== d) toggleDirection(); }}
                   className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium capitalize transition ${direction === d ? 'bg-sky-600 text-white' : 'bg-white text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
                 >
-                  {d === 'vertical' ? '↕ Top-down' : '↔ Horizontal'}
+                  {t(locale, d === 'vertical' ? 'topDown' : 'horizontal')}
                 </button>
               ))}
             </div>
-            <div className="flex overflow-hidden rounded border border-zinc-200 dark:border-zinc-700" role="tablist" aria-label="Simulation mode">
+            <div className="flex overflow-hidden rounded border border-zinc-200 dark:border-zinc-700" role="tablist" aria-label={t(locale, 'simulationMode')}>
               {([{ id: 'guided', Icon: TargetIcon }, { id: 'free', Icon: CubeIcon }] as const).map(({ id: m, Icon }) => (
                 <button
                   key={m}
@@ -719,32 +722,32 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
               className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition ${showHints ? 'bg-sky-600 text-white' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
             >
               <QuestionMarkCircledIcon width={13} height={13} className="shrink-0" aria-hidden />
-              Patterns
+              {t(locale, 'patterns')}
             </button>
             <button
               onClick={() => restartRun('Canvas reset')}
               className="inline-flex items-center gap-1 rounded bg-zinc-100 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
             >
               <ResetIcon width={13} height={13} className="shrink-0" aria-hidden />
-              Reset
+              {t(locale, 'reset')}
             </button>
             <button
               onClick={() => setStatus(skillId, status === 'completed' ? 'in-progress' : 'completed')}
               className={`inline-flex items-center gap-1 rounded px-3 py-1 text-xs font-semibold transition ${status === 'completed' || hasWon ? 'bg-emerald-600 text-white hover:bg-emerald-500' : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700'}`}
             >
               {(status === 'completed' || hasWon) && <CheckIcon width={13} height={13} className="shrink-0" aria-hidden />}
-              {status === 'completed' ? 'Completed' : 'Mark complete'}
+              {status === 'completed' ? t(locale, 'completed') : t(locale, 'markComplete')}
             </button>
           </div>
         </div>
         {/* transport */}
-        <div className="mt-2 flex flex-wrap items-center gap-1.5" aria-label="Playback controls">
+        <div className="mt-2 flex flex-wrap items-center gap-1.5" aria-label={t(locale, 'playbackControls')}>
           {phase !== 'playing' ? (
-            <button onClick={onPlay} className="inline-flex items-center gap-1.5 rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500"><PlayIcon width={13} height={13} className="shrink-0" aria-hidden />Play</button>
+            <button onClick={onPlay} className="inline-flex items-center gap-1.5 rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500"><PlayIcon width={13} height={13} className="shrink-0" aria-hidden />{t(locale, 'play')}</button>
           ) : (
-            <button onClick={onPause} className="inline-flex items-center gap-1.5 rounded bg-amber-500 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-400"><PauseIcon width={13} height={13} className="shrink-0" aria-hidden />Pause</button>
+            <button onClick={onPause} className="inline-flex items-center gap-1.5 rounded bg-amber-500 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-400"><PauseIcon width={13} height={13} className="shrink-0" aria-hidden />{t(locale, 'pause')}</button>
           )}
-          <button onClick={onStepOnce} title="Advance 0.2 simulated seconds" className="inline-flex items-center gap-1.5 rounded bg-zinc-100 px-2.5 py-1 text-xs text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"><TrackNextIcon width={13} height={13} className="shrink-0" aria-hidden />Step</button>
+          <button onClick={onStepOnce} title="Advance 0.2 simulated seconds" className="inline-flex items-center gap-1.5 rounded bg-zinc-100 px-2.5 py-1 text-xs text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"><TrackNextIcon width={13} height={13} className="shrink-0" aria-hidden />{t(locale, 'step')}</button>
           <div className="flex overflow-hidden rounded border border-zinc-200 dark:border-zinc-700" aria-label="Speed">
             {[1, 2, 4].map((s) => (
               <button key={s} onClick={() => setSpeed(s)} aria-pressed={speed === s} className={`px-2 py-1 font-mono text-xs transition ${speed === s ? 'bg-sky-600 text-white' : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}>{s}×</button>
@@ -759,7 +762,7 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
           <button onClick={() => fireManual('heal', 'sql')} className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-emerald-500/60 hover:text-emerald-600 dark:border-zinc-700 dark:text-zinc-300"><CheckCircledIcon width={13} height={13} className="shrink-0" aria-hidden />Heal SQL</button>
           <button onClick={() => fireManual('heal', 'auth')} className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-emerald-500/60 hover:text-emerald-600 dark:border-zinc-700 dark:text-zinc-300"><CheckCircledIcon width={13} height={13} className="shrink-0" aria-hidden />Heal auth</button>
         </div>
-        <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Add components">
+        <div className="mt-2 flex flex-wrap gap-1.5" aria-label={t(locale, 'addComponents')}>
           {preset.palette.map((kind) => (
             <button
               key={kind}
@@ -802,7 +805,7 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
               </ReactFlow>
               {phase === 'idle' && (
                 <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded bg-zinc-900/85 px-3 py-1.5 text-xs text-zinc-200 dark:bg-zinc-100/90 dark:text-zinc-900">
-                  Press Play — requests will flow through your architecture live
+                  {t(locale, 'pressPlayHint')}
                 </div>
               )}
             </div>
