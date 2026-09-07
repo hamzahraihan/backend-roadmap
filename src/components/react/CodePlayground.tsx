@@ -5,6 +5,7 @@ import { LANGUAGES, usePersistedLanguage, type SupportedLanguage } from '../../l
 import { runCode } from '../../lib/execute';
 import ResizableSplit from './ResizableSplit';
 import { ProgressProvider, useProgressContext } from './ProgressProvider';
+import { t, useUILocale } from '../../lib/i18n';
 import { useTheme } from '../../lib/theme';
 
 interface CodePlaygroundProps {
@@ -21,6 +22,7 @@ export default function CodePlayground({ skillId, starterCode }: CodePlaygroundP
 }
 
 function CodePlaygroundContent({ skillId, starterCode }: CodePlaygroundProps) {
+  const locale = useUILocale();
   const [language, setLanguage] = usePersistedLanguage();
   const [code, setCode] = useState(() => starterCode[language] ?? '');
   const [output, setOutput] = useState('');
@@ -87,7 +89,7 @@ function CodePlaygroundContent({ skillId, starterCode }: CodePlaygroundProps) {
             className="inline-flex items-center gap-1 rounded bg-zinc-800 px-3 py-1 text-xs text-zinc-300 hover:bg-zinc-700"
           >
             <ResetIcon width={13} height={13} className="shrink-0" aria-hidden />
-            Reset
+            {t(locale, 'reset')}
           </button>
           <button
             onClick={onRun}
@@ -95,7 +97,7 @@ function CodePlaygroundContent({ skillId, starterCode }: CodePlaygroundProps) {
             className="inline-flex items-center gap-1.5 rounded bg-emerald-600 px-4 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {!running && <PlayIcon width={13} height={13} className="shrink-0" aria-hidden />}
-            {running ? 'Running…' : 'Run'}
+            {running ? t(locale, 'running') : t(locale, 'run')}
           </button>
         </div>
       </div>
@@ -127,7 +129,7 @@ function CodePlaygroundContent({ skillId, starterCode }: CodePlaygroundProps) {
           right={
             <div className="flex min-h-0 h-full flex-col border-t border-zinc-800 lg:border-t">
               <div className="flex items-center justify-between px-4 py-1.5">
-                <span className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-zinc-500"><ActivityLogIcon width={13} height={13} aria-hidden />Output</span>
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-zinc-500"><ActivityLogIcon width={13} height={13} aria-hidden />{t(locale, 'output')}</span>
                 <button
                   onClick={() => setStatus(skillId, status === 'completed' ? 'in-progress' : 'completed')}
                   className={`inline-flex items-center gap-1 rounded px-3 py-1 text-xs font-medium transition ${
@@ -137,7 +139,7 @@ function CodePlaygroundContent({ skillId, starterCode }: CodePlaygroundProps) {
                   }`}
                 >
                   {status === 'completed' && <CheckIcon width={13} height={13} className="shrink-0" aria-hidden />}
-                  {status === 'completed' ? 'Completed' : 'Mark complete'}
+                  {status === 'completed' ? t(locale, 'completed') : t(locale, 'markComplete')}
                 </button>
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto bg-zinc-100 px-4 py-2 font-mono text-xs dark:bg-zinc-950">
@@ -145,7 +147,7 @@ function CodePlaygroundContent({ skillId, starterCode }: CodePlaygroundProps) {
                 {error && <pre className="whitespace-pre-wrap text-red-600 dark:text-red-400">{error}</pre>}
                 {!output && !error && (
                   <span className="text-zinc-600">
-                    Press Run to execute your code via the Wandbox sandbox.
+                    {t(locale, 'pressRunHint')}
                   </span>
                 )}
               </div>
