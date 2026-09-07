@@ -30,6 +30,12 @@ const {
           }
           document.documentElement.classList.toggle('dark', t === 'dark');
         } catch (e) {}
+        try {
+          var l = localStorage.getItem('backend-roadmap:ui-locale');
+          document.documentElement.lang = l === 'id' || l === 'en' ? l : 'en';
+        } catch (e) {
+          document.documentElement.lang = 'en';
+        }
       })();
     </script>
   </head>
