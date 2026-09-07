@@ -23,6 +23,7 @@ import { ProgressProvider, useProgressContext } from './ProgressProvider';
 import type { SkillSummary } from '../../lib/skills';
 import type { ProgressStatus } from '../../lib/progress';
 import { useTheme } from '../../lib/theme';
+import { t, useUILocale, type UIStringKey } from '../../lib/i18n';
 import { clearLayout, loadLayout, saveLayout } from '../../lib/skillLayout';
 import { CATEGORY_COLORS, buildNeighborhood, categoryColor } from '../../lib/skillGraph';
 
@@ -34,14 +35,15 @@ type SkillNodeData = {
   status: ProgressStatus;
 };
 
-const STATUS_STYLES: Record<ProgressStatus, { ring: string; badge: string; label: string }> = {
-  'not-started': { ring: 'border-sky-500/60', badge: 'bg-sky-500/15 text-sky-700 dark:text-sky-300', label: 'Available' },
-  'in-progress': { ring: 'border-amber-500/60', badge: 'bg-amber-500/15 text-amber-700 dark:text-amber-300', label: 'In progress' },
-  completed: { ring: 'border-emerald-500/60', badge: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300', label: 'Completed' },
+const STATUS_STYLES: Record<ProgressStatus, { ring: string; badge: string; label: UIStringKey }> = {
+  'not-started': { ring: 'border-sky-500/60', badge: 'bg-sky-500/15 text-sky-700 dark:text-sky-300', label: 'available' },
+  'in-progress': { ring: 'border-amber-500/60', badge: 'bg-amber-500/15 text-amber-700 dark:text-amber-300', label: 'inProgress' },
+  completed: { ring: 'border-emerald-500/60', badge: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300', label: 'completed' },
 };
 
 function SkillNode({ data }: NodeProps) {
   const { skill, status } = data as unknown as SkillNodeData;
+  const locale = useUILocale();
   const style = STATUS_STYLES[status];
   return (
     <div
@@ -63,7 +65,7 @@ function SkillNode({ data }: NodeProps) {
         <span
           className={`rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${style.badge}`}
         >
-          {style.label}
+          {t(locale, style.label)}
         </span>
       </div>
       <Handle
@@ -82,6 +84,7 @@ interface SkillTreeProps {
 }
 
 function SkillSearch({ skills, onPick }: { skills: SkillSummary[]; onPick: (id: string) => void }) {
+  const locale = useUILocale();
   const [query, setQuery] = useState('');
   const matches =
     query.trim().length === 0
@@ -91,7 +94,7 @@ function SkillSearch({ skills, onPick }: { skills: SkillSummary[]; onPick: (id: 
     <div className="relative">
       <input
         value={query}
-        aria-label="Search skills"
+        aria-label={t(locale, 'searchSkills')}
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && matches.length > 0) {
@@ -101,7 +104,7 @@ function SkillSearch({ skills, onPick }: { skills: SkillSummary[]; onPick: (id: 
             setQuery('');
           }
         }}
-        placeholder="Search skills…"
+        placeholder={t(locale, 'searchSkillsPlaceholder')}
         spellCheck={false}
         autoComplete="off"
         className="w-44 rounded border border-zinc-300 bg-white/90 px-2.5 py-1 text-xs text-zinc-800 placeholder-zinc-400 outline-none focus:border-sky-500 dark:border-zinc-700 dark:bg-zinc-900/90 dark:text-zinc-100"
@@ -113,7 +116,7 @@ function SkillSearch({ skills, onPick }: { skills: SkillSummary[]; onPick: (id: 
               disabled
               className="block w-full cursor-default px-3 py-1.5 text-left text-xs text-zinc-400 dark:text-zinc-500"
             >
-              No matches
+              {t(locale, 'noMatches')}
             </button>
           ) : (
             matches.map((m) => (
@@ -172,6 +175,7 @@ function applyDim(
 }
 
 function SkillTreeContent({ skills }: SkillTreeProps) {
+  const locale = useUILocale();
   const { getStatus, clearProgress } = useProgressContext();
   const theme = useTheme();
   const { setCenter, flowToScreenPosition, getNode, fitView } = useReactFlow();
@@ -334,7 +338,7 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
             onClick={() => setDisabledCats(new Set())}
             className="rounded-full border border-zinc-300 px-2.5 py-0.5 text-[11px] text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
-            All
+            {t(locale, 'all')}
           </button>
           {allCategories.map((cat) => {
             const off = disabledCats.has(cat);
@@ -374,7 +378,7 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
             }}
           />
           <span className="rounded bg-white/80 px-2 py-1 font-mono text-[11px] text-zinc-500 dark:bg-zinc-900/80 dark:text-zinc-400">
-            {completedCount} / {skills.length} completed
+            {completedCount} / {skills.length} {t(locale, 'completedCount')}
           </span>
         </div>
       </div>
@@ -448,13 +452,13 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
                     <span
                       className={`rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${statusStyle.badge}`}
                     >
-                      {statusStyle.label}
+                        {t(locale, statusStyle.label)}
                     </span>
                   </div>
                 </div>
                 <button
                   onClick={() => setSelectedId(null)}
-                  aria-label="Close"
+                  aria-label={t(locale, 'close')}
                   className="rounded px-1.5 py-0.5 text-xs text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
                 >
                   ✕
@@ -464,7 +468,7 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
                 href={`/skill/${skill.id}`}
                 className="mt-2 inline-flex items-center gap-1 rounded bg-sky-600 px-3 py-1 text-xs font-semibold text-white hover:bg-sky-500"
               >
-                Open →
+                {t(locale, 'openLink')}
               </a>
             </div>
           );
@@ -472,9 +476,9 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
       <div className="absolute right-4 top-4 z-10 flex flex-col items-end gap-2">
         <div className="flex flex-wrap justify-end gap-2 rounded bg-white/80 p-2 dark:bg-zinc-900/80">
           {[
-            { label: 'Available', cls: 'border-sky-500/60' },
-            { label: 'In progress', cls: 'border-amber-500/60' },
-            { label: 'Completed', cls: 'border-emerald-500/60' },
+            { label: t(locale, 'available'), cls: 'border-sky-500/60' },
+            { label: t(locale, 'inProgress'), cls: 'border-amber-500/60' },
+            { label: t(locale, 'completed'), cls: 'border-emerald-500/60' },
           ].map((i) => (
             <span key={i.label} className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
               <span className={`h-2.5 w-2.5 rounded-sm border-2 ${i.cls} bg-white dark:bg-zinc-900`} />
@@ -483,7 +487,7 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
           ))}
         </div>
         <details className="rounded bg-white/80 p-2 dark:bg-zinc-900/80">
-          <summary className="cursor-pointer text-[11px] text-zinc-500 dark:text-zinc-400">Categories</summary>
+          <summary className="cursor-pointer text-[11px] text-zinc-500 dark:text-zinc-400">{t(locale, 'categories')}</summary>
           <div className="mt-1.5 grid max-h-48 grid-cols-2 gap-1 overflow-y-auto">
             {Object.entries(CATEGORY_COLORS).map(([cat, hex]) => (
               <span key={cat} className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
@@ -498,14 +502,14 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
           className="inline-flex items-center gap-1.5 rounded bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
         >
           <ResetIcon width={13} height={13} className="shrink-0" aria-hidden />
-          Reset layout
+          {t(locale, 'resetLayout')}
         </button>
         <button
           onClick={clearProgress}
           className="inline-flex items-center gap-1.5 rounded bg-zinc-100 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
         >
           <ResetIcon width={13} height={13} className="shrink-0" aria-hidden />
-          Reset progress
+          {t(locale, 'resetProgress')}
         </button>
       </div>
     </div>
