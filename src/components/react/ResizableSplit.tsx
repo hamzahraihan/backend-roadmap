@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadSplit, saveSplit, clampSplit } from '../../lib/split';
+import { t, useUILocale } from '../../lib/i18n';
 
 type Orientation = 'horizontal' | 'vertical';
 
@@ -29,6 +30,7 @@ export default function ResizableSplit({
   leftClassName = '',
   rightClassName = '',
 }: ResizableSplitProps) {
+  const locale = useUILocale();
   const [pct, setPct] = useState<number>(() => {
     if (storageKey) return loadSplit(storageKey, defaultPct);
     return defaultPct;
@@ -185,7 +187,7 @@ export default function ResizableSplit({
         onPointerDown={onPointerDown}
         onKeyDown={handleKeyDown}
         onDoubleClick={onDoubleClick}
-        title="Drag to resize • Double-click to reset • Arrow keys to nudge"
+        title={t(locale, 'resizeHandle')}
         className={`group relative shrink-0 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-0 ${
           isHorizontal ? 'hidden lg:flex lg:w-2 lg:cursor-col-resize lg:items-center lg:justify-center' : 'flex h-2 cursor-row-resize items-center justify-center'
         } bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 ${isDragging ? '!bg-sky-500/20' : ''} ${isMobile && isHorizontal ? '!hidden' : ''}`}
