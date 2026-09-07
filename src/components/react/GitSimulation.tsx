@@ -7,12 +7,14 @@ import GitGraph from './GitGraph';
 import GitCheatSheet from './GitCheatSheet';
 import ResizableSplit from './ResizableSplit';
 import { ProgressProvider, useProgressContext } from './ProgressProvider';
+import { t, useUILocale } from '../../lib/i18n';
 
 interface GitSimulationProps {
   skillId: string;
 }
 
 function GitSimulationContent({ skillId }: GitSimulationProps) {
+  const locale = useUILocale();
   const { getStatus, setStatus } = useProgressContext();
   const status = getStatus(skillId);
   const preset = useMemo(() => getPreset(skillId) ?? getPreset('free'), [skillId]);
@@ -80,7 +82,7 @@ function GitSimulationContent({ skillId }: GitSimulationProps) {
             <div className="flex items-center gap-2">
               <span className="rounded bg-sky-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">Git Simulation</span>
               <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{preset?.objective.title}</span>
-              {hasWon && <span className="inline-flex items-center gap-1 rounded bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white"><CheckIcon width={11} height={11} aria-hidden />Objective met</span>}
+              {hasWon && <span className="inline-flex items-center gap-1 rounded bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white"><CheckIcon width={11} height={11} aria-hidden />{t(locale, 'objectiveMet')}</span>}
               {commitCount > 0 && <span className="text-xs text-zinc-500">{commitCount} commits</span>}
             </div>
             <p className="mt-1 max-w-[60ch] text-xs leading-5 text-zinc-600 dark:text-zinc-400">{preset?.objective.description}</p>
@@ -88,17 +90,17 @@ function GitSimulationContent({ skillId }: GitSimulationProps) {
             {remoteSynced && <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">Remote in sync.</p>}
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
-            <div className="flex overflow-hidden rounded border border-zinc-200 dark:border-zinc-700" role="tablist" aria-label="Graph direction">
+            <div className="flex overflow-hidden rounded border border-zinc-200 dark:border-zinc-700" role="tablist" aria-label={t(locale, 'graphDirection')}>
               {(['vertical', 'horizontal'] as const).map((d) => (
                 <button
                   key={d}
                   role="tab"
                   aria-selected={direction === d}
-                  title={d === 'vertical' ? 'Top-down view' : 'Left-to-right view'}
+                  title={t(locale, d === 'vertical' ? 'topDownView' : 'leftRightView')}
                   onClick={() => setDirection(d)}
                   className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium capitalize transition ${direction === d ? 'bg-sky-600 text-white' : 'bg-white text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
                 >
-                  {d === 'vertical' ? '↕ Top-down' : '↔ Horizontal'}
+                  {t(locale, d === 'vertical' ? 'topDown' : 'horizontal')}
                 </button>
               ))}
             </div>
@@ -107,21 +109,21 @@ function GitSimulationContent({ skillId }: GitSimulationProps) {
               className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition ${showCheat ? 'bg-sky-600 text-white' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
             >
               <QuestionMarkCircledIcon width={13} height={13} className="shrink-0" aria-hidden />
-              Cheat sheet
+              {t(locale, 'cheatSheet')}
             </button>
             <button
               onClick={handleResetRepo}
               className="inline-flex items-center gap-1 rounded bg-zinc-100 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
             >
               <ResetIcon width={13} height={13} className="shrink-0" aria-hidden />
-              Reset repo
+              {t(locale, 'resetRepo')}
             </button>
             <button
               onClick={() => setStatus(skillId, status === 'completed' ? 'in-progress' : 'completed')}
               className={`inline-flex items-center gap-1 rounded px-3 py-1 text-xs font-semibold transition ${status === 'completed' ? 'bg-emerald-600 text-white hover:bg-emerald-500' : hasWon ? 'bg-emerald-600 text-white hover:bg-emerald-500' : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700'}`}
             >
               {(status === 'completed' || hasWon) && <CheckIcon width={13} height={13} className="shrink-0" aria-hidden />}
-              {status === 'completed' ? 'Completed' : 'Mark complete'}
+              {status === 'completed' ? t(locale, 'completed') : t(locale, 'markComplete')}
             </button>
           </div>
         </div>
