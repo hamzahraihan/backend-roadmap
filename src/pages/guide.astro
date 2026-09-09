@@ -1,0 +1,26 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import GuideView from '../components/react/GuideView.tsx';
+import TopBar from '../components/TopBar.astro';
+import { getCollection } from 'astro:content';
+
+const skills = (await getCollection('skills'))
+  .sort((a, b) => a.data.order - b.data.order)
+  .map((s) => ({
+    id: s.id,
+    title: s.data.title,
+    category: s.data.category,
+    order: s.data.order,
+    dependsOn: s.data.dependsOn,
+    position: s.data.position,
+  }));
+---
+
+<BaseLayout title="Step-by-step guide">
+  <main class="flex h-screen flex-col">
+    <TopBar variant="guide" />
+    <div class="min-h-0 flex-1 overflow-y-auto">
+      <GuideView client:load skills={skills} />
+    </div>
+  </main>
+</BaseLayout>
