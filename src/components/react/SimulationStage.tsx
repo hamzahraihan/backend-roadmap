@@ -20,6 +20,7 @@ import {
   type EdgeProps,
   type Node,
   type NodeProps,
+  type ReactFlowInstance,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import {
@@ -77,6 +78,8 @@ function DesignCanvasNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as CanvasNodeData;
   const horizontal = d.direction === 'horizontal';
   const updateNodeInternals = useUpdateNodeInternals();
+  const { deleteElements } = useReactFlow();
+  const locale = useUILocale();
   // Handle sides flip with direction — React Flow caches handle geometry, so
   // it must be notified or edges stay glued to the stale side (detached lines).
   useEffect(() => {
@@ -84,7 +87,7 @@ function DesignCanvasNode({ id, data, selected }: NodeProps) {
   }, [id, horizontal, updateNodeInternals]);
   return (
     <div
-      className={`w-[150px] rounded-lg border-2 bg-white p-2 shadow-lg transition dark:bg-zinc-900/90 ${
+      className={`relative w-[150px] rounded-lg border-2 bg-white p-2 shadow-lg transition dark:bg-zinc-900/90 ${
         d.failed
           ? 'border-red-500/70 opacity-80'
           : d.bottleneck
@@ -112,6 +115,19 @@ function DesignCanvasNode({ id, data, selected }: NodeProps) {
         </div>
       )}
       <Handle type="source" position={horizontal ? Position.Right : Position.Bottom} className="!h-2 !w-2 !border-0 !bg-zinc-500" />
+      {selected && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            deleteElements({ nodes: [{ id }] });
+          }}
+          aria-label={t(locale, 'deleteComponent')}
+          title={t(locale, 'deleteComponent')}
+          className="nodrag nopan absolute -right-2 -top-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-zinc-600 text-white shadow hover:bg-red-500 dark:bg-zinc-300 dark:text-zinc-900 dark:hover:bg-red-400"
+        >
+          <Cross1Icon width={10} height={10} aria-hidden />
+        </button>
+      )}
     </div>
   );
 }
@@ -305,6 +321,8 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
   const lastRpsSimRef = useRef(0);
   const nodesRef = useRef<Node[]>([]);
   const logRef = useRef<HTMLDivElement>(null);
+  const flowWrapperRef = useRef<HTMLDivElement>(null);
+  const reactFlowRef = useRef<ReactFlowInstance | null>(null);
   useEffect(() => {
     nodesRef.current = nodes;
   }, [nodes]);
@@ -618,19 +636,75 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
   const addKind = useCallback(
     (kind: DesignKind) => {
       const n = starterNode(kind, kind);
-      const idx = nodes.length;
-      setNodes((nds) => [
-        ...nds,
-        {
-          id: n.id,
-          type: 'design',
-          position: layoutPos(idx, direction),
-          data: { kind, label: DESIGN_KIND_LABELS[kind], bottleneck: false, failed: false, queued: 0, direction } satisfies CanvasNodeData,
-        },
-      ]);
+      setNodes((nds) => {
+        let position = layoutPos(nds.length, direction);
+        const instance = reactFlowRef.current;
+        const wrapper = flowWrapperRef.current;
+        if (instance && wrapper) {
+          try {
+            const rect = wrapper.getBoundingClientRect();
+            const center = instance.screenToFlowPosition({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+            if (Number.isFinite(center.x) && Number.isFinite(center.y)) {
+              let nearest: Node | null = null;
+              let best = Infinity;
+              for (const node of nds) {
+                const dx = node.position.x + 75 - center.x;
+                const dy = node.position.y + 50 - center.y;
+                const d = dx * dx + dy * dy;
+                if (d < best) {
+                  best = d;
+                  nearest = node;
+                }
+              }
+              if (nearest) {
+                const step = direction === 'horizontal' ? { x: 250, y: 0 } : { x: 0, y: 160 };
+                let candidate = { x: nearest.position.x + step.x, y: nearest.position.y + step.y };
+                let guard = 0;
+                while (
+                  nds.some((q) => Math.abs(q.position.x - candidate.x) < 170 && Math.abs(q.position.y - candidate.y) < 110) &&
+                  guard < 12
+                ) {
+                  candidate =
+                    direction === 'horizontal'
+                      ? { x: candidate.x, y: candidate.y + 130 }
+                      : { x: candidate.x + 180, y: candidate.y };
+                  guard += 1;
+                }
+                const topLeft = instance.screenToFlowPosition({ x: rect.left + 16, y: rect.top + 16 });
+                const bottomRight = instance.screenToFlowPosition({ x: rect.right - 166, y: rect.bottom - 126 });
+                if (
+                  [topLeft.x, topLeft.y, bottomRight.x, bottomRight.y].every((v) => Number.isFinite(v)) &&
+                  bottomRight.x > topLeft.x &&
+                  bottomRight.y > topLeft.y
+                ) {
+                  candidate = {
+                    x: Math.min(Math.max(candidate.x, topLeft.x), bottomRight.x),
+                    y: Math.min(Math.max(candidate.y, topLeft.y), bottomRight.y),
+                  };
+                }
+                position = candidate;
+              } else {
+                position = { x: center.x - 75, y: center.y - 50 };
+              }
+            }
+          } catch {
+            position = layoutPos(nds.length, direction);
+          }
+        }
+        return [
+          ...nds.map((node) => (node.selected ? { ...node, selected: false } : node)),
+          {
+            id: n.id,
+            type: 'design',
+            position,
+            selected: true,
+            data: { kind, label: DESIGN_KIND_LABELS[kind], bottleneck: false, failed: false, queued: 0, direction } satisfies CanvasNodeData,
+          },
+        ];
+      });
       touchTopology();
     },
-    [nodes.length, direction, setNodes, touchTopology],
+    [direction, setNodes, touchTopology],
   );
 
   const onConnect = useCallback(
@@ -783,13 +857,16 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
           minPct={30}
           maxPct={70}
           left={
-            <div className="relative h-full min-h-[300px]">
+            <div ref={flowWrapperRef} className="relative h-full min-h-[300px]">
               <ReactFlow
                 nodes={nodes}
                 edges={edges}
                 onNodesChange={handleNodesChange}
                 onEdgesChange={handleEdgesChange}
                 onConnect={onConnect}
+                onInit={(instance) => {
+                  reactFlowRef.current = instance;
+                }}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
                 fitView
