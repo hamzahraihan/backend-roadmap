@@ -5,7 +5,7 @@ export interface SavedPosition {
 
 export type SavedLayout = Record<string, SavedPosition>;
 
-const STORAGE_KEY = 'backend-roadmap:skill-layout';
+const STORAGE_KEY = 'backend-roadmap:skill-layout:v3';
 
 function isPosition(v: unknown): v is SavedPosition {
   if (!v || typeof v !== 'object') return false;
