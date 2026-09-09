@@ -17,7 +17,7 @@ import {
   type NodeProps,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Graph, layout } from '@dagrejs/dagre';
+import { CATEGORY_COLORS, buildNeighborhood, categoryColor, findCoreId, layoutSkillTree } from '../../lib/skillGraph';
 import { ResetIcon } from '@radix-ui/react-icons';
 import { ProgressProvider, useProgressContext } from './ProgressProvider';
 import type { SkillSummary } from '../../lib/skills';
@@ -25,7 +25,6 @@ import type { ProgressStatus } from '../../lib/progress';
 import { useTheme } from '../../lib/theme';
 import { t, useUILocale, type UIStringKey } from '../../lib/i18n';
 import { clearLayout, loadLayout, saveLayout } from '../../lib/skillLayout';
-import { CATEGORY_COLORS, buildNeighborhood, categoryColor } from '../../lib/skillGraph';
 
 const NODE_WIDTH = 200;
 const NODE_HEIGHT = 64;
@@ -33,6 +32,7 @@ const NODE_HEIGHT = 64;
 type SkillNodeData = {
   skill: SkillSummary;
   status: ProgressStatus;
+  isCore: boolean;
 };
 
 const STATUS_STYLES: Record<ProgressStatus, { ring: string; badge: string; label: UIStringKey }> = {
@@ -41,13 +41,15 @@ const STATUS_STYLES: Record<ProgressStatus, { ring: string; badge: string; label
   completed: { ring: 'border-emerald-500/60', badge: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300', label: 'completed' },
 };
 
+const CORE_RING = 'border-amber-400 shadow-[0_0_28px_rgba(251,191,36,0.35)]';
+
 function SkillNode({ data }: NodeProps) {
-  const { skill, status } = data as unknown as SkillNodeData;
+  const { skill, status, isCore } = data as unknown as SkillNodeData;
   const locale = useUILocale();
   const style = STATUS_STYLES[status];
   return (
     <div
-      className={`relative w-[200px] cursor-pointer rounded-lg border-2 bg-white p-3 shadow-lg transition hover:border-zinc-500 dark:bg-zinc-900/90 ${style.ring}`}
+      className={`relative w-[200px] cursor-pointer rounded-lg border-2 bg-white p-3 shadow-lg transition hover:border-zinc-500 dark:bg-zinc-900/90 ${isCore ? CORE_RING : style.ring}`}
     >
       <span
         className="absolute left-2 top-2 h-3.5 w-3.5 rounded-full ring-2 ring-white dark:ring-zinc-900"
@@ -56,12 +58,12 @@ function SkillNode({ data }: NodeProps) {
       />
       <Handle
         type="target"
-        position={Position.Top}
+        position={Position.Left}
         className="!h-2 !w-2 !border-0 !bg-zinc-500"
       />
-       <div className="truncate pl-5 text-sm font-semibold text-zinc-900 dark:text-zinc-100">{skill.title}</div>
+       <div className="truncate pl-5 text-sm font-semibold text-zinc-900 dark:text-zinc-100">{isCore ? `★ ${skill.title}` : skill.title}</div>
       <div className="mt-1 flex items-center justify-between">
-        <span className="text-xs text-zinc-500">{skill.category}</span>
+        <span className="text-xs text-zinc-500">{isCore ? 'Core · Start here' : skill.category}</span>
         <span
           className={`rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${style.badge}`}
         >
@@ -70,7 +72,7 @@ function SkillNode({ data }: NodeProps) {
       </div>
       <Handle
         type="source"
-        position={Position.Bottom}
+        position={Position.Right}
         className="!h-2 !w-2 !border-0 !bg-zinc-500"
       />
     </div>
@@ -166,8 +168,10 @@ function applyDim(
       const col = colorById.get(e.target) ?? '#a1a1aa';
       return {
         ...e,
-        style: { stroke: lit ? col : '#3f3f46', strokeWidth: lit ? 2.5 : 1, opacity: lit ? 1 : 0.25 },
-        markerEnd: { type: MarkerType.ArrowClosed, color: lit ? col : '#3f3f46' },
+        // Reference look: active path in full category color, everything else
+        // sinks to a hairline so lanes stay readable.
+        style: { stroke: lit ? col : '#52525b', strokeWidth: lit ? 2 : 1, opacity: lit ? 1 : 0.35 },
+        markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: lit ? col : '#52525b' },
         className: lit ? e.className : undefined,
       };
     }),
@@ -188,23 +192,18 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
   const [layoutEpoch, setLayoutEpoch] = useState(0);
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
-    const g = new Graph();
-    g.setGraph({ rankdir: 'TB', nodesep: 110, ranksep: 150, edgesep: 30, marginx: 40, marginy: 40 });
-    g.setDefaultEdgeLabel(() => ({}));
-    skills.forEach((s) => g.setNode(s.id, { width: NODE_WIDTH, height: NODE_HEIGHT }));
-    skills.forEach((s) => s.dependsOn.forEach((dep) => g.setEdge(dep, s.id)));
-    layout(g);
+    // Skill-tree layout rooted at the core skill (most basic first):
+    // x column = longest dependency chain, y spread = trunk bands.
+    const coreId = findCoreId(skills);
+    const points = layoutSkillTree(skills, NODE_WIDTH, NODE_HEIGHT);
 
     const nodeList: Node[] = skills.map((s) => {
-      const pos = g.node(s.id);
+      const pos = points.get(s.id) ?? { x: 0, y: 0 };
       return {
         id: s.id,
         type: 'skill',
-        position: {
-          x: (pos?.x ?? 0) - NODE_WIDTH / 2,
-          y: (pos?.y ?? 0) - NODE_HEIGHT / 2,
-        },
-        data: { skill: s, status: deriveStatus(s) } satisfies SkillNodeData,
+        position: { x: pos.x, y: pos.y },
+        data: { skill: s, status: deriveStatus(s), isCore: s.id === coreId } satisfies SkillNodeData,
       };
     });
 
@@ -221,9 +220,13 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
           id: `${dep}-${s.id}`,
           source: dep,
           target: s.id,
-          type: 'smoothstep',
-          markerEnd: { type: MarkerType.ArrowClosed, color: '#a1a1aa' },
-          style: { stroke: '#a1a1aa', strokeWidth: 1.5 },
+          // Sharp 90° orthogonal routing like the reference: each edge keeps
+          // its own lane instead of curves bleeding into neighbours.
+          type: 'step',
+          interactionWidth: 20,
+          zIndex: -1,
+          markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: '#a1a1aa' },
+          style: { stroke: '#a1a1aa', strokeWidth: 1.25 },
         });
       }),
     );
@@ -310,6 +313,12 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
     setLayoutEpoch((e) => e + 1);
     requestAnimationFrame(() => fitView({ padding: 0.2 }));
   }, [fitView]);
+  // Re-fit once the (re)layout settles: custom nodes measure async, and the
+  // initial fitView can run before widths are known, clipping the core column.
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => fitView({ padding: 0.25 }));
+    return () => cancelAnimationFrame(raf);
+  }, [fitView, layoutEpoch]);
 
   const onNodeMouseEnter = useCallback(
     (_: MouseEvent, node: Node) => {
@@ -396,9 +405,11 @@ function SkillTreeContent({ skills }: SkillTreeProps) {
         onNodeMouseLeave={onNodeMouseLeave}
         onMove={() => selectedId && setViewportTick((t) => t + 1)}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
-        minZoom={0.2}
+        fitViewOptions={{ padding: 0.25 }}
+        minZoom={0.15}
         maxZoom={1.5}
+        elevateEdgesOnSelect={false}
+        onlyRenderVisibleElements
         colorMode={theme === 'dark' ? 'dark' : 'light'}
         proOptions={{ hideAttribution: false }}
       >
