@@ -2,11 +2,11 @@
 import ThemeToggle from './react/ThemeToggle.tsx';
 import LanguageToggle from './react/LanguageToggle.tsx';
 import ActivitiesSidebar from './react/ActivitiesSidebar.tsx';
-import { ArrowLeftIcon, CommitIcon, EyeNoneIcon, EyeOpenIcon, LayersIcon } from '@radix-ui/react-icons';
+import { ChevronDownIcon, ChevronUpIcon, CommitIcon, EyeNoneIcon, EyeOpenIcon, HomeIcon, LayersIcon, ListBulletIcon } from '@radix-ui/react-icons';
 import { getCollection } from 'astro:content';
 
 interface Props {
-  variant?: 'home' | 'skill' | 'playground' | 'design';
+  variant?: 'home' | 'skill' | 'playground' | 'design' | 'guide';
   title?: string;
   category?: string;
 }
@@ -17,6 +17,14 @@ const isHome = variant === 'home';
 const isSkill = variant === 'skill';
 const isPlayground = variant === 'playground';
 const isDesign = variant === 'design';
+const isGuide = variant === 'guide';
+
+const dockItem = (active: boolean) =>
+  `flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+    active
+      ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+      : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'
+  }`;
 
 const allSkills = (await getCollection('skills'))
   .sort((a, b) => a.data.order - b.data.order)
@@ -29,13 +37,12 @@ const allSkills = (await getCollection('skills'))
   }));
 ---
 
-<header
+<nav
   data-topbar
-  class="sticky top-0 z-40 flex h-12 items-center justify-between border-b border-zinc-200 bg-white px-4 text-zinc-900 select-none dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
-  role="banner"
+  aria-label="Primary"
+  class="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-40 w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 select-none transition-transform duration-300 ease-out"
 >
-  <!-- Left: Activities + App / Breadcrumb -->
-  <nav aria-label="Primary" class="flex min-w-0 items-center gap-3">
+  <div class="flex items-center gap-1 overflow-x-auto rounded-2xl border border-zinc-200/80 bg-white/80 px-2 py-1.5 text-zinc-900 shadow-2xl backdrop-blur-xl dark:border-zinc-700/80 dark:bg-zinc-900/80 dark:text-zinc-100">
     <button
       type="button"
       data-activities-trigger
@@ -44,123 +51,123 @@ const allSkills = (await getCollection('skills'))
       aria-haspopup="dialog"
       aria-label="Open activities"
       data-i18n-aria="openActivities"
-      class="hidden sm:flex items-center gap-2.5 rounded-lg px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+      class="flex items-center gap-2 rounded-xl px-2.5 py-2 text-zinc-600 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:text-zinc-300 dark:hover:bg-zinc-800"
     >
-      <span class="grid h-[18px] w-[18px] grid-cols-3 gap-0.5" aria-hidden="true">
-        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-zinc-700 dark:bg-zinc-300"></span>
-        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-zinc-700 dark:bg-zinc-300"></span>
-        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-zinc-700 dark:bg-zinc-300"></span>
-        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-zinc-700 dark:bg-zinc-300"></span>
-        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-zinc-700 dark:bg-zinc-300"></span>
-        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-zinc-700 dark:bg-zinc-300"></span>
-        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-zinc-700 dark:bg-zinc-300"></span>
-        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-zinc-700 dark:bg-zinc-300"></span>
-        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-zinc-700 dark:bg-zinc-300"></span>
+      <span class="grid h-[18px] w-[18px] shrink-0 grid-cols-3 gap-0.5" aria-hidden="true">
+        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-current"></span>
+        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-current"></span>
+        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-current"></span>
+        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-current"></span>
+        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-current"></span>
+        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-current"></span>
+        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-current"></span>
+        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-current"></span>
+        <span class="h-[5px] w-[5px] rounded-[1.5px] bg-current"></span>
       </span>
-        <span class="hidden md:inline text-sm font-semibold tracking-tight" data-i18n="activities">Activities</span>
+      <span class="hidden text-xs font-semibold tracking-tight sm:inline" data-i18n="activities">Activities</span>
     </button>
 
-    <button
-      type="button"
-      data-activities-trigger
-      aria-expanded="false"
-      aria-controls="activities-drawer"
-      aria-haspopup="dialog"
-      aria-label="Open activities"
-      data-i18n-aria="openActivities"
-      class="sm:hidden flex h-8 w-8 items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-    >
-      <svg viewBox="0 0 16 16" class="h-4 w-4 fill-zinc-700 dark:fill-zinc-300" aria-hidden="true"><rect x="1" y="1" width="4" height="4" rx="1"/><rect x="6" y="1" width="4" height="4" rx="1"/><rect x="11" y="1" width="4" height="4" rx="1"/><rect x="1" y="6" width="4" height="4" rx="1"/><rect x="6" y="6" width="4" height="4" rx="1"/><rect x="11" y="6" width="4" height="4" rx="1"/><rect x="1" y="11" width="4" height="4" rx="1"/><rect x="6" y="11" width="4" height="4" rx="1"/><rect x="11" y="11" width="4" height="4" rx="1"/></svg>
-    </button>
+    <span class="h-5 w-px shrink-0 bg-zinc-200 dark:bg-zinc-700" aria-hidden="true"></span>
 
-    <span class="hidden sm:block h-5 w-px bg-zinc-200 dark:bg-zinc-800" aria-hidden="true"></span>
+    <a href="/" aria-current={isHome ? 'page' : undefined} class={dockItem(isHome)}>
+      <HomeIcon width={15} height={15} />
+      <span class="hidden sm:inline" data-i18n="roadmap">Roadmap</span>
+    </a>
+    <a href="/guide" aria-current={isGuide ? 'page' : undefined} class={dockItem(isGuide)}>
+      <ListBulletIcon width={15} height={15} />
+      <span class="hidden sm:inline" data-i18n="guide">Guide</span>
+    </a>
+    <a href="/playground" aria-current={isPlayground ? 'page' : undefined} class={dockItem(isPlayground)}>
+      <CommitIcon width={15} height={15} />
+      <span class="hidden sm:inline" data-i18n="playground">Playground</span>
+    </a>
+    <a href="/design" aria-current={isDesign ? 'page' : undefined} class={dockItem(isDesign)}>
+      <LayersIcon width={15} height={15} />
+      <span class="hidden sm:inline" data-i18n="designStudio">Design Studio</span>
+    </a>
 
-    <div class="flex min-w-0 items-center gap-2">
-      <a href="/" class="truncate text-sm font-semibold hover:text-sky-600 dark:hover:text-sky-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg px-1.5 py-0.5">
-        Backend Roadmap
-      </a>
-      {isSkill && title && (
-        <>
-          <span class="text-zinc-400 dark:text-zinc-600" aria-hidden="true">›</span>
-          <span class="hidden md:inline truncate text-sm text-zinc-600 dark:text-zinc-300 max-w-[28vw] font-medium">{title}</span>
-          <span class="md:hidden truncate text-sm text-zinc-600 dark:text-zinc-300 max-w-[38vw] font-medium">{title}</span>
-        </>
-      )}
-      {isPlayground && (
-        <>
-          <span class="text-zinc-400 dark:text-zinc-600" aria-hidden="true">›</span>
-          <span class="text-sm font-medium text-zinc-600 dark:text-zinc-300">Git Playground</span>
-        </>
-      )}
-      {isDesign && (
-        <>
-          <span class="text-zinc-400 dark:text-zinc-600" aria-hidden="true">›</span>
-          <span class="text-sm font-medium text-zinc-600 dark:text-zinc-300">Design Studio</span>
-        </>
-      )}
-    </div>
+    <span class="h-5 w-px shrink-0 bg-zinc-200 dark:bg-zinc-700" aria-hidden="true"></span>
 
-    {isSkill && category && (
-        <span class="hidden lg:inline rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-          {category}
-        </span>
-      )}
-      {isSkill && (
-        <button
-          data-docs-toggle
-          aria-pressed="false"
-          aria-label="Hide documentation"
-          class="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-          title="Hide/show documentation"
-        >
-          <span data-docs-icon-open><EyeOpenIcon width={14} height={14} /></span>
-          <span data-docs-icon-closed class="hidden"><EyeNoneIcon width={14} height={14} /></span>
-          <span data-docs-toggle-label>Hide docs</span>
-        </button>
-      )}
-    </nav>
-
-  <!-- Right: Actions + Power (ThemeToggle) -->
-  <div class="flex items-center gap-1.5" aria-label="System actions">
-    {isHome && (
-      <a href="/playground" class="hidden md:inline-flex items-center gap-1.5 rounded-full bg-zinc-900 px-3.5 py-1.5 text-xs font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
-        <CommitIcon width={14} height={14} />
-        Git Playground
-      </a>
-    )}
-    {isHome && (
-      <a href="/design" class="hidden md:inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
-        <LayersIcon width={14} height={14} />
-        Design Studio
-      </a>
-    )}
-    {isSkill && (
-      <a href="/" class="hidden sm:inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
-        <ArrowLeftIcon width={13} height={13} />
-        <span data-i18n="roadmap">Roadmap</span>
-      </a>
-    )}
-    {isPlayground && (
-      <a href="/" class="hidden sm:inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
-        <ArrowLeftIcon width={13} height={13} />
-        <span data-i18n="roadmap">Roadmap</span>
-      </a>
-    )}
-    {isDesign && (
-      <a href="/" class="hidden sm:inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
-        <ArrowLeftIcon width={13} height={13} />
-        <span data-i18n="roadmap">Roadmap</span>
-      </a>
-    )}
-
-    <span class="hidden sm:block h-5 w-px bg-zinc-200 dark:bg-zinc-800 mx-1" aria-hidden="true"></span>
-
-    <span class="flex items-center gap-1.5">
+    <span class="flex shrink-0 items-center gap-1.5">
       <LanguageToggle client:load compact />
       <ThemeToggle client:load compact />
     </span>
+    <span class="h-5 w-px shrink-0 bg-zinc-200 dark:bg-zinc-700" aria-hidden="true"></span>
+
+    <button
+      type="button"
+      data-dock-toggle
+      aria-expanded="true"
+      aria-label="Hide navigation"
+      title="Hide navigation"
+      class="flex shrink-0 items-center rounded-xl px-2 py-2 text-zinc-500 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:text-zinc-400 dark:hover:bg-zinc-800"
+    >
+      <ChevronDownIcon width={15} height={15} />
+    </button>
   </div>
-</header>
+</nav>
+
+<button
+  type="button"
+  data-dock-tab
+  aria-label="Show navigation"
+  title="Show navigation"
+  class="fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-40 hidden -translate-x-1/2 items-center rounded-full border border-zinc-200/80 bg-white/80 px-3 py-1.5 text-zinc-500 shadow-xl backdrop-blur-xl hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-zinc-700/80 dark:bg-zinc-900/80 dark:text-zinc-400 dark:hover:text-zinc-100"
+>
+  <ChevronUpIcon width={15} height={15} />
+</button>
+
+{isSkill && (
+  <div data-topchip class="fixed left-4 top-4 z-40 flex min-w-0 max-w-[calc(100vw-2rem)] items-center gap-2 rounded-xl border border-zinc-200/80 bg-white/80 px-3 py-2 text-sm shadow-lg backdrop-blur-xl transition-transform duration-300 ease-out dark:border-zinc-700/80 dark:bg-zinc-900/80">
+    <a href="/" class="shrink-0 font-semibold text-zinc-900 hover:text-sky-600 dark:text-zinc-100 dark:hover:text-sky-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded">
+      Backend Roadmap
+    </a>
+    {title && (
+      <>
+        <span class="shrink-0 text-zinc-400 dark:text-zinc-600" aria-hidden="true">›</span>
+        <span class="truncate font-medium text-zinc-600 dark:text-zinc-300">{title}</span>
+      </>
+    )}
+    {category && (
+      <span class="hidden shrink-0 rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-zinc-500 sm:inline dark:bg-zinc-800 dark:text-zinc-400">
+        {category}
+      </span>
+    )}
+    <button
+      data-docs-toggle
+      aria-pressed="false"
+      aria-label="Hide documentation"
+      class="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+      title="Hide/show documentation"
+    >
+      <span data-docs-icon-open><EyeOpenIcon width={14} height={14} /></span>
+      <span data-docs-icon-closed class="hidden"><EyeNoneIcon width={14} height={14} /></span>
+      <span data-docs-toggle-label>Hide docs</span>
+    </button>
+    <button
+      type="button"
+      data-topchip-toggle
+      aria-expanded="true"
+      aria-label="Hide navigation"
+      title="Hide navigation"
+      class="inline-flex shrink-0 items-center rounded-full px-1.5 py-1.5 text-zinc-500 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:text-zinc-400 dark:hover:bg-zinc-800"
+    >
+      <ChevronUpIcon width={14} height={14} />
+    </button>
+  </div>
+)}
+
+{isSkill && (
+  <button
+    type="button"
+    data-topchip-tab
+    aria-label="Show navigation"
+    title="Show navigation"
+    class="fixed left-4 top-2 z-40 hidden items-center rounded-full border border-zinc-200/80 bg-white/80 px-2.5 py-1 text-zinc-500 shadow-lg backdrop-blur-xl hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-zinc-700/80 dark:bg-zinc-900/80 dark:text-zinc-400 dark:hover:text-zinc-100"
+  >
+    <ChevronDownIcon width={14} height={14} />
+  </button>
+)}
 
 <ActivitiesSidebar client:load skills={allSkills} />
 
@@ -189,12 +196,38 @@ const allSkills = (await getCollection('skills'))
       docsBtn.setAttribute('aria-label', docLabel);
       docsBtn.setAttribute('title', docLabel);
     }
+    // Dock chevron always hides, edge tab always shows: static roles, localized labels.
+    const dockToggle = document.querySelector('[data-dock-toggle]');
+    if (dockToggle) {
+      const hideLabel = t(locale, 'collapseNav');
+      dockToggle.setAttribute('aria-label', hideLabel);
+      dockToggle.setAttribute('title', hideLabel);
+    }
+    const dockTab = document.querySelector('[data-dock-tab]');
+    if (dockTab) {
+      const showLabel = t(locale, 'expandNav');
+      dockTab.setAttribute('aria-label', showLabel);
+      dockTab.setAttribute('title', showLabel);
+    }
+    const topchipToggle = document.querySelector('[data-topchip-toggle]');
+    if (topchipToggle) {
+      const hideLabel = t(locale, 'collapseNav');
+      topchipToggle.setAttribute('aria-label', hideLabel);
+      topchipToggle.setAttribute('title', hideLabel);
+    }
+    const topchipTab = document.querySelector('[data-topchip-tab]');
+    if (topchipTab) {
+      const showLabel = t(locale, 'expandNav');
+      topchipTab.setAttribute('aria-label', showLabel);
+      topchipTab.setAttribute('title', showLabel);
+    }
   }
 
   renderTopBarLocale();
   subscribeUILocale(renderTopBarLocale);
   window.addEventListener('docs-toggle', renderTopBarLocale);
   window.addEventListener('docs-collapsed-sync', renderTopBarLocale);
+  window.addEventListener('dock-toggle', renderTopBarLocale);
 </script>
 
 <script is:inline>
@@ -265,6 +298,70 @@ const allSkills = (await getCollection('skills'))
       }
       activitiesTriggers.forEach((el) => el.setAttribute('aria-expanded', String(next)));
     });
+
+    // Dock: swipe/click to park at the edge, tab to restore. Persisted.
+    const dock = document.querySelector('[data-topbar]');
+    const dockToggle = document.querySelector('[data-dock-toggle]');
+    const dockTab = document.querySelector('[data-dock-tab]');
+    const dockKey = 'backend-roadmap:dock-collapsed';
+    if (dock && dockToggle && dockTab) {
+      function setDock(collapsed) {
+        dock.classList.toggle('translate-y-[calc(100%+2rem)]', collapsed);
+        dockToggle.setAttribute('aria-expanded', String(!collapsed));
+        dockTab.classList.toggle('hidden', !collapsed);
+        dockTab.classList.toggle('flex', collapsed);
+        try { localStorage.setItem(dockKey, collapsed ? '1' : '0'); } catch {}
+        window.dispatchEvent(new CustomEvent('dock-toggle', { detail: { collapsed } }));
+      }
+      try {
+        if (localStorage.getItem(dockKey) === '1') setDock(true);
+      } catch {}
+      dockToggle.addEventListener('click', () => setDock(true));
+      dockTab.addEventListener('click', () => setDock(false));
+      // Swipe down (or sideways) on the dock parks it; small taps ignored.
+      let sx = 0, sy = 0;
+      dock.addEventListener('touchstart', (e) => {
+        const touch = e.changedTouches[0];
+        sx = touch.clientX; sy = touch.clientY;
+      }, { passive: true });
+      dock.addEventListener('touchend', (e) => {
+        const touch = e.changedTouches[0];
+        const dx = touch.clientX - sx, dy = touch.clientY - sy;
+        if (dy > 48 || Math.abs(dx) > 72) setDock(true);
+      }, { passive: true });
+    }
+
+    // Skill context chip: same park-at-edge treatment (upward).
+    const topchip = document.querySelector('[data-topchip]');
+    const topchipToggle = document.querySelector('[data-topchip-toggle]');
+    const topchipTab = document.querySelector('[data-topchip-tab]');
+    const topchipKey = 'backend-roadmap:topchip-collapsed';
+    if (topchip && topchipToggle && topchipTab) {
+      function setTopchip(collapsed) {
+        topchip.classList.toggle('translate-y-[calc(-100%-2rem)]', collapsed);
+        topchipToggle.setAttribute('aria-expanded', String(!collapsed));
+        topchipTab.classList.toggle('hidden', !collapsed);
+        topchipTab.classList.toggle('flex', collapsed);
+        try { localStorage.setItem(topchipKey, collapsed ? '1' : '0'); } catch {}
+        window.dispatchEvent(new CustomEvent('dock-toggle', { detail: { collapsed } }));
+      }
+      try {
+        if (localStorage.getItem(topchipKey) === '1') setTopchip(true);
+      } catch {}
+      topchipToggle.addEventListener('click', () => setTopchip(true));
+      topchipTab.addEventListener('click', () => setTopchip(false));
+      // Swipe up on the chip parks it; small taps ignored.
+      let tx = 0, ty = 0;
+      topchip.addEventListener('touchstart', (e) => {
+        const touch = e.changedTouches[0];
+        tx = touch.clientX; ty = touch.clientY;
+      }, { passive: true });
+      topchip.addEventListener('touchend', (e) => {
+        const touch = e.changedTouches[0];
+        const dx = touch.clientX - tx, dy = touch.clientY - ty;
+        if (dy < -48 || Math.abs(dx) > 72) setTopchip(true);
+      }, { passive: true });
+    }
   })();
 </script>
 
