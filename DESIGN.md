@@ -1,5 +1,5 @@
 ---
-name: Backend Roadmap
+name: Dissect
 description: An interactive backend proficiency platform — a calm, terminal-like reference where learners read, run code, and track progress.
 colors:
   paper: "#ffffff"
