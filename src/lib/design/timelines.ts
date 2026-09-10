@@ -17,6 +17,16 @@ export const SCENARIO_TIMELINES: Record<string, TimelineEvent[]> = {
   'rate-limiting-url-shortener': [
     { atSec: 8, trigger: { type: 'spike', factor: 5, secs: 12 } },
   ],
+  'microservices-orders': [
+    { atSec: 12, trigger: { type: 'spike', factor: 3, secs: 12 } },
+    { atSec: 28, trigger: { type: 'note', text: 'Order burst over — fulfillment queue drains async.' } },
+  ],
+  'websocket-chat': [{ atSec: 8, trigger: { type: 'spike', factor: 5, secs: 10 } }],
+  'cdn-video-streaming': [
+    { atSec: 10, trigger: { type: 'spike', factor: 4, secs: 15 } },
+    { atSec: 30, trigger: { type: 'note', text: 'Premiere over — edge hit ratio settles.' } },
+  ],
+  'search-autocomplete': [{ atSec: 8, trigger: { type: 'spike', factor: 4, secs: 10 } }],
   free: [],
 };
 

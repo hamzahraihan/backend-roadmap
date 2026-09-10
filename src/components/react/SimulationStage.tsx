@@ -28,7 +28,12 @@ import '@xyflow/react/dist/style.css';
 import {
   ActivityLogIcon,
   BarChartIcon,
+  BoxIcon,
   ChatBubbleIcon,
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronUpIcon,
   CheckCircledIcon,
   CheckIcon,
   ClockIcon,
@@ -39,18 +44,27 @@ import {
   EnterFullScreenIcon,
   ExclamationTriangleIcon,
   FrameIcon,
+  GlobeIcon,
+  GridIcon,
   GroupIcon,
   LightningBoltIcon,
+  LayersIcon,
   Link2Icon,
   MagnifyingGlassIcon,
   MinusIcon,
+  MixerHorizontalIcon,
   PauseIcon,
   Pencil2Icon,
   PlayIcon,
   PlusIcon,
   QuestionMarkCircledIcon,
+  ReaderIcon,
   ReloadIcon,
   ResetIcon,
+  RocketIcon,
+  RowsIcon,
+  ShuffleIcon,
+  StackIcon,
   TargetIcon,
   TimerIcon,
   TrackNextIcon,
@@ -365,17 +379,40 @@ interface SimulationStageProps {
   layout: 'panel' | 'studio';
 }
 
-const STUDIO_SCENARIOS = [
-  { id: 'rate-limiting-url-shortener', label: 'TinyURL', Icon: Link2Icon },
-  { id: 'realtime-rides-feed', label: 'Chat & Rides', Icon: ChatBubbleIcon },
-  { id: 'databases-sharding', label: 'Scaling', Icon: BarChartIcon },
-  { id: 'distributed-failures', label: 'Failures', Icon: ExclamationTriangleIcon },
-  { id: 'free', label: 'Free canvas', Icon: CubeIcon },
+const SCENARIO_GROUPS = ['Start here', 'Scale', 'Real-time & async', 'Resilience', 'Sandbox'] as const;
+
+interface StudioScenario {
+  id: string;
+  label: string;
+  blurb: string;
+  group: (typeof SCENARIO_GROUPS)[number];
+  Icon: typeof Link2Icon;
+}
+
+const STUDIO_SCENARIOS: StudioScenario[] = [
+  { id: 'system-design-fundamentals', label: 'Request path', blurb: 'Client to durable storage backbone', group: 'Start here', Icon: TargetIcon },
+  { id: 'data-modeling-apis', label: 'API boundaries', blurb: 'One writer per entity, policy at edge', group: 'Start here', Icon: LayersIcon },
+  { id: 'scalability-performance', label: 'Scaling', blurb: 'Load balancer plus app replicas', group: 'Scale', Icon: BarChartIcon },
+  { id: 'caching-cdn', label: 'Caching', blurb: 'Cache-first reads for hot paths', group: 'Scale', Icon: LightningBoltIcon },
+  { id: 'databases-sharding', label: 'Sharding', blurb: 'Scale the data tier past one node', group: 'Scale', Icon: StackIcon },
+  { id: 'load-balancing-gateway', label: 'LB + gateway', blurb: 'Balance replicas, gate at the edge', group: 'Scale', Icon: ShuffleIcon },
+  { id: 'rate-limiting-url-shortener', label: 'TinyURL', blurb: 'Guarded edge, cache-first reads', group: 'Scale', Icon: Link2Icon },
+  { id: 'cdn-video-streaming', label: 'Video at edge', blurb: 'CDN absorbs bytes, origin does metadata', group: 'Scale', Icon: GlobeIcon },
+  { id: 'search-autocomplete', label: 'Instant search', blurb: 'Cached index answers keystrokes', group: 'Scale', Icon: MagnifyingGlassIcon },
+  { id: 'messaging-queues', label: 'Queues', blurb: 'Decouple slow work behind a queue', group: 'Real-time & async', Icon: RowsIcon },
+  { id: 'realtime-rides-feed', label: 'Live feed', blurb: 'Fan out live state without blocking', group: 'Real-time & async', Icon: RocketIcon },
+  { id: 'websocket-chat', label: 'WebSocket chat', blurb: 'Sockets stay open, delivery async', group: 'Real-time & async', Icon: ChatBubbleIcon },
+  { id: 'microservices-orders', label: 'Microservices', blurb: 'Gateway, owned services, async orders', group: 'Real-time & async', Icon: BoxIcon },
+  { id: 'distributed-failures', label: 'Failures', blurb: 'Degrade gracefully under failure', group: 'Resilience', Icon: ExclamationTriangleIcon },
+  { id: 'docker-containers', label: 'Containers', blurb: 'No single container sinks the path', group: 'Resilience', Icon: GridIcon },
+  { id: 'kubernetes-basics', label: 'Kubernetes', blurb: 'Service fronts healthy replicas', group: 'Resilience', Icon: ReaderIcon },
+  { id: 'interview-framework', label: 'Interview drill', blurb: 'Full architecture under spike + failure', group: 'Resilience', Icon: CheckCircledIcon },
+  { id: 'free', label: 'Free canvas', blurb: 'No goal — explore any topology', group: 'Sandbox', Icon: CubeIcon },
 ];
 
 type Phase = 'idle' | 'playing' | 'paused' | 'step';
 
-function toFlowNodes(state: ReturnType<typeof initialStateFor>, direction: FlowDirection = 'vertical'): Node[] {
+function toFlowNodes(state: ReturnType<typeof initialStateFor>, direction: FlowDirection = 'horizontal'): Node[] {
   return state.nodes.map((n, i) => ({
     id: n.id,
     type: 'design',
@@ -401,7 +438,6 @@ function nextStudioId(prefix: string): string {
   studioSeq += 1;
   return `${prefix}-${Date.now().toString(36)}-${studioSeq}`;
 }
-
 function makeDesignNode(kind: DesignKind, position: { x: number; y: number }, direction: FlowDirection, parentId?: string): Node {
   const n = starterNode(kind, kind);
   return {
@@ -456,7 +492,7 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
   const isFree = preset.id === 'free';
 
   const [mode, setMode] = useState<'guided' | 'free'>(isFree ? 'free' : 'guided');
-  const [direction, setDirection] = useState<FlowDirection>('vertical');
+  const [direction, setDirection] = useState<FlowDirection>('horizontal');
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [ready, setReady] = useState(false);
@@ -508,6 +544,12 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
   const [zoom, setZoom] = useState(1);
   const [showMap, setShowMap] = useState(true);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [libOpen, setLibOpen] = useState(true);
+  const [rightOpen, setRightOpen] = useState(true);
+  const [rightTab, setRightTab] = useState<'inspector' | 'simulate' | 'log'>('inspector');
+  const [briefOpen, setBriefOpen] = useState(true);
+  const [scenarioMenuOpen, setScenarioMenuOpen] = useState(false);
+  const [scenarioQuery, setScenarioQuery] = useState('');
   const studioKey = `backend-roadmap:studio:${preset.id}`;
   const canUndo = pastRef.current.length > 0;
   const canRedo = futureRef.current.length > 0;
@@ -1119,6 +1161,10 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
   }, [undo, redo, duplicateSelected]);
 
   const selectedNodes = useMemo(() => nodes.filter((n) => n.selected), [nodes]);
+  const activeEntry = useMemo(
+    () => STUDIO_SCENARIOS.find((s) => s.id === activeScenario) ?? STUDIO_SCENARIOS[STUDIO_SCENARIOS.length - 1],
+    [activeScenario],
+  );
   const selectedEdges = useMemo(() => edges.filter((e) => e.selected), [edges]);
   const designCount = useMemo(() => nodes.filter((n) => n.type === 'design').length, [nodes]);
   const noteCount = useMemo(() => nodes.filter((n) => n.type === 'note').length, [nodes]);
@@ -1230,45 +1276,8 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
   if (!ready) return <div className="flex h-full items-center justify-center text-xs text-zinc-500">{t(locale, 'loadingSimulation')}</div>;
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-zinc-50 dark:bg-zinc-950">
-      {layout === 'studio' && (
-        <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-zinc-200 bg-white px-4 py-2 dark:border-zinc-800 dark:bg-zinc-900" aria-label={t(locale, 'scenarioLibrary')}>
-          <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">{t(locale, 'scenarios')}</span>
-          {STUDIO_SCENARIOS.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => {
-                setActiveScenario(s.id);
-                setMode(s.id === 'free' ? 'free' : 'guided');
-              }}
-              className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition ${activeScenario === s.id ? 'bg-sky-600 text-white' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
-            >
-              <s.Icon width={13} height={13} className="shrink-0" aria-hidden />
-              {s.label}
-            </button>
-          ))}
-        </div>
-      )}
-      {layout === 'studio' && (
-        <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-zinc-200 bg-white px-4 py-1.5 dark:border-zinc-800 dark:bg-zinc-900" aria-label="Canvas tools">
-          <span className="mr-1 inline-flex items-center gap-1.5 text-[11px] text-zinc-500" title={savedAt ? `Autosaved at ${savedAt.toLocaleTimeString()}` : 'Changes autosave to this browser'}>
-            <span className={`h-1.5 w-1.5 rounded-full ${savedAt ? 'bg-emerald-500' : 'bg-zinc-400'}`} aria-hidden />
-            {savedAt ? `SAVED ${savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : 'UNSAVED'}
-          </span>
-          <span className="mx-1 h-4 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
-          <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)" className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800"><ResetIcon width={13} height={13} aria-hidden />Undo</button>
-          <button onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)" className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800"><ReloadIcon width={13} height={13} aria-hidden />Redo</button>
-          <span className="mx-1 h-4 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
-          <button onClick={duplicateSelected} disabled={selectedNodes.length === 0} title="Duplicate selection (Ctrl+D)" className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800"><CopyIcon width={13} height={13} aria-hidden />Duplicate</button>
-          <button onClick={deleteSelected} disabled={selectedNodes.length === 0 && selectedEdges.length === 0} title="Delete selection (Del)" className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-zinc-600 hover:bg-red-500/10 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:text-red-400"><TrashIcon width={13} height={13} aria-hidden />Delete</button>
-          <button onClick={groupIntoSection} disabled={!selectedNodes.some((n) => n.type === 'design' && !n.parentId)} title="Wrap selected components in a section frame" className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800"><GroupIcon width={13} height={13} aria-hidden />Group into section</button>
-          <span className="mx-1 h-4 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
-          <button onClick={clearCanvas} title="Remove everything from the canvas (undoable)" className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"><TrashIcon width={13} height={13} aria-hidden />Clear</button>
-          <button onClick={resetCanvas} title="Restore the scenario starter canvas" className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"><ResetIcon width={13} height={13} aria-hidden />Reset</button>
-          <span className="mx-1 h-4 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
-          <span className="font-mono text-[11px] text-zinc-500">{designCount} components · {edges.length} connections · {noteCount} notes · {sectionCount} sections</span>
-        </div>
-      )}
+    <div className="relative flex h-full min-h-0 flex-col bg-zinc-50 dark:bg-zinc-950">
+      {layout !== 'studio' && (
       <div className="shrink-0 border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -1362,7 +1371,6 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
           <button onClick={() => fireManual('heal', 'sql')} className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-emerald-500/60 hover:text-emerald-600 dark:border-zinc-700 dark:text-zinc-300"><CheckCircledIcon width={13} height={13} className="shrink-0" aria-hidden />Heal SQL</button>
           <button onClick={() => fireManual('heal', 'auth')} className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-emerald-500/60 hover:text-emerald-600 dark:border-zinc-700 dark:text-zinc-300"><CheckCircledIcon width={13} height={13} className="shrink-0" aria-hidden />Heal auth</button>
         </div>
-      {layout !== 'studio' && (
         <div className="mt-2 flex flex-wrap gap-1.5" aria-label={t(locale, 'addComponents')}>
           {preset.palette.map((kind) => (
             <button
@@ -1392,115 +1400,597 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
             Section
           </button>
         </div>
-      )}
       </div>
+      )}
 
       <div className="flex min-h-0 flex-1">
         {layout === 'studio' && (
-          <aside className="hidden w-52 shrink-0 flex-col overflow-y-auto border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 lg:flex" aria-label="Component library">
-            <div className="sticky top-0 border-b border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="flex items-center gap-1.5 rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700">
-                <MagnifyingGlassIcon width={12} height={12} className="shrink-0 text-zinc-400" aria-hidden />
-                <input
-                  value={paletteQuery}
-                  onChange={(e) => setPaletteQuery(e.target.value)}
-                  placeholder="Search components…"
-                  aria-label="Search components"
-                  className="w-full bg-transparent text-xs text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100"
+          <div ref={flowWrapperRef} className="relative min-h-0 min-w-0 flex-1">
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={handleNodesChange}
+              onEdgesChange={handleEdgesChange}
+              onConnect={onConnect}
+              onInit={(instance) => {
+                reactFlowRef.current = instance;
+              }}
+              onDrop={onPaletteDrop}
+              onDragOver={onPaletteDragOver}
+              onNodeDragStart={onNodeDragStart}
+              onNodeDragStop={onNodeDragStop}
+              onMove={(_e, viewport) => setZoom((z) => (Math.abs(z - viewport.zoom) < 0.005 ? z : viewport.zoom))}
+              nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              fitView
+              fitViewOptions={{ padding: 0.2 }}
+              minZoom={0.2}
+              maxZoom={2}
+              colorMode={theme === 'dark' ? 'dark' : 'light'}
+              proOptions={{ hideAttribution: false }}
+              deleteKeyCode={['Backspace', 'Delete']}
+              panOnScroll
+              selectionOnDrag
+              panOnDrag={[1, 2]}
+            >
+              <Background variant={BackgroundVariant.Dots} gap={24} size={1} color={theme === 'dark' ? '#27272a' : '#e4e4e7'} />
+              {showMap && (
+                <MiniMap
+                  pannable
+                  zoomable
+                  position="bottom-left"
+                  style={{ width: 150, height: 100 }}
+                  className="!border !border-zinc-200 !bg-white/90 dark:!border-zinc-700 dark:!bg-zinc-900/90"
+                  maskColor={theme === 'dark' ? 'rgba(9, 9, 11, 0.7)' : 'rgba(244, 244, 245, 0.7)'}
                 />
+              )}
+            </ReactFlow>
+            {phase === 'idle' && (
+              <div className="pointer-events-none absolute bottom-24 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded bg-zinc-900/85 px-3 py-1.5 text-xs text-zinc-200 dark:bg-zinc-100/90 dark:text-zinc-900">
+                {t(locale, 'pressPlayHint')}
               </div>
-              <p className="mt-1.5 px-1 text-[10px] leading-4 text-zinc-500">Drag onto the canvas, or click to place.</p>
+            )}
+            {/* Layer scale: canvas internals ≤6 · floaters z-10 · left column owns the menu layer (z-20, backdrop z-20, dropdown z-30) · site chrome z-40. */}
+            {/* top-center floating tools */}
+            <div className="absolute left-1/2 top-3 z-10 -translate-x-1/2" aria-label="Canvas tools">
+              <div className="flex items-center gap-0.5 rounded-xl border border-zinc-200 bg-white/95 px-1.5 py-1 shadow-xl backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/95">
+                <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)" aria-label="Undo" className="rounded p-1.5 text-zinc-600 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800"><ResetIcon width={14} height={14} aria-hidden /></button>
+                <button onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)" aria-label="Redo" className="rounded p-1.5 text-zinc-600 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800"><ReloadIcon width={14} height={14} aria-hidden /></button>
+                <span className="mx-1 h-4 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
+                <button onClick={duplicateSelected} disabled={selectedNodes.length === 0} title="Duplicate selection (Ctrl+D)" aria-label="Duplicate" className="rounded p-1.5 text-zinc-600 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800"><CopyIcon width={14} height={14} aria-hidden /></button>
+                <button onClick={deleteSelected} disabled={selectedNodes.length === 0 && selectedEdges.length === 0} title="Delete selection (Del)" aria-label="Delete selection" className="rounded p-1.5 text-zinc-600 hover:bg-red-500/10 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:text-red-400"><TrashIcon width={14} height={14} aria-hidden /></button>
+                <button onClick={groupIntoSection} disabled={!selectedNodes.some((n) => n.type === 'design' && !n.parentId)} title="Wrap selected components in a section frame" aria-label="Group into section" className="rounded p-1.5 text-zinc-600 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800"><GroupIcon width={14} height={14} aria-hidden /></button>
+                <span className="mx-1 h-4 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
+                <button onClick={clearCanvas} title="Remove everything from the canvas (undoable)" aria-label="Clear canvas" className="rounded p-1.5 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"><TrashIcon width={14} height={14} aria-hidden /></button>
+                <button onClick={resetCanvas} title="Restore the scenario starter canvas" aria-label="Reset canvas" className="rounded p-1.5 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"><ResetIcon width={14} height={14} aria-hidden /></button>
+                <span className="mx-1 hidden h-4 w-px bg-zinc-200 sm:block dark:bg-zinc-700" aria-hidden />
+                <span className="hidden whitespace-nowrap px-1 font-mono text-[10px] text-zinc-500 sm:block">{designCount} components · {edges.length} connections · {noteCount} notes · {sectionCount} sections</span>
+              </div>
             </div>
-            {PALETTE_GROUPS.map((group) => {
-              const items = group.items.filter((k) => DESIGN_KIND_LABELS[k].toLowerCase().includes(paletteQuery.trim().toLowerCase()));
-              if (items.length === 0) return null;
-              return (
-                <div key={group.title} className="border-b border-zinc-100 px-2 py-2 dark:border-zinc-800/60">
-                  <div className="px-1 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{group.title}</div>
-                  {items.map((kind) => (
+            {/* left floating column: scenarios, brief, library */}
+            <div className="pointer-events-none absolute bottom-3 left-3 top-3 z-20 flex w-60 flex-col gap-2">
+              <div className="pointer-events-auto relative rounded-xl border border-zinc-200 bg-white/95 p-2 shadow-xl dark:border-zinc-700 dark:bg-zinc-900/95" aria-label={t(locale, 'scenarioLibrary')}>
+                <button
+                  onClick={() => setScenarioMenuOpen((v) => !v)}
+                  aria-expanded={scenarioMenuOpen}
+                  aria-haspopup="menu"
+                  title="Browse scenarios"
+                  className="flex w-full items-center gap-1.5 rounded-lg px-1.5 py-1 text-left transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                >
+                  <activeEntry.Icon width={14} height={14} className="shrink-0 text-sky-600 dark:text-sky-400" aria-hidden />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-semibold text-zinc-900 dark:text-zinc-100">{activeEntry.label}</span>
+                    <span className="block text-[10px] uppercase tracking-wider text-zinc-400">Scenario</span>
+                  </span>
+                  <ChevronDownIcon width={13} height={13} className={`shrink-0 text-zinc-400 transition-transform ${scenarioMenuOpen ? 'rotate-180' : ''}`} aria-hidden />
+                </button>
+                <div className="mt-1 flex items-center gap-1.5 px-1 text-[10px] text-zinc-500" title={savedAt ? `Autosaved at ${savedAt.toLocaleTimeString()}` : 'Changes autosave to this browser'}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${savedAt ? 'bg-emerald-500' : 'bg-zinc-400'}`} aria-hidden />
+                  {savedAt ? `SAVED ${savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : 'UNSAVED'}
+                </div>
+                {scenarioMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-20 cursor-default" onClick={() => setScenarioMenuOpen(false)} aria-hidden />
                     <div
-                      key={kind}
-                      role="button"
-                      tabIndex={0}
-                      draggable
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData('application/x-design-kind', kind);
-                        e.dataTransfer.effectAllowed = 'move';
-                      }}
-                      onClick={() => addKind(kind)}
+                      role="menu"
+                      aria-label="Scenarios"
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          addKind(kind);
-                        }
+                        if (e.key === 'Escape') setScenarioMenuOpen(false);
                       }}
-                      title={`Add ${DESIGN_KIND_LABELS[kind]}`}
-                      className="group flex cursor-grab items-center gap-2 rounded px-1.5 py-1.5 text-xs text-zinc-700 hover:bg-zinc-100 active:cursor-grabbing dark:text-zinc-300 dark:hover:bg-zinc-800"
+                      className="absolute left-0 top-full z-30 mt-1.5 max-h-[60vh] w-72 overflow-y-auto rounded-xl border border-zinc-200 bg-white p-1.5 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900"
                     >
-                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: KIND_ACCENT[kind] }} aria-hidden />
-                      <span className="flex-1 truncate">{DESIGN_KIND_LABELS[kind]}</span>
-                      <PlusIcon width={12} height={12} className="shrink-0 text-zinc-300 opacity-0 transition group-hover:opacity-100 dark:text-zinc-600" aria-hidden />
+                      <div className="mb-1 flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2 py-1 dark:border-zinc-700">
+                        <MagnifyingGlassIcon width={12} height={12} className="shrink-0 text-zinc-400" aria-hidden />
+                        <input
+                          value={scenarioQuery}
+                          onChange={(e) => setScenarioQuery(e.target.value)}
+                          placeholder="Search scenarios…"
+                          aria-label="Search scenarios"
+                          className="w-full min-w-0 bg-transparent text-xs text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100"
+                        />
+                      </div>
+                      {SCENARIO_GROUPS.map((group) => {
+                        const items = STUDIO_SCENARIOS.filter(
+                          (s) =>
+                            s.group === group &&
+                            `${s.label} ${s.blurb} ${getPreset(s.id).objective.title}`.toLowerCase().includes(scenarioQuery.trim().toLowerCase()),
+                        );
+                        if (items.length === 0) return null;
+                        return (
+                          <div key={group} className="py-0.5">
+                            <div className="px-2 pb-0.5 pt-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{group}</div>
+                            {items.map((s) => {
+                              const isActive = s.id === activeScenario;
+                              return (
+                                <button
+                                  key={s.id}
+                                  role="menuitem"
+                                  onClick={() => {
+                                    setActiveScenario(s.id);
+                                    setMode(s.id === 'free' ? 'free' : 'guided');
+                                    setScenarioMenuOpen(false);
+                                    setScenarioQuery('');
+                                  }}
+                                  className={`flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left transition ${isActive ? 'bg-sky-600/10 dark:bg-sky-500/15' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                                >
+                                  <s.Icon width={14} height={14} className={`mt-0.5 shrink-0 ${isActive ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-400'}`} aria-hidden />
+                                  <span className="min-w-0 flex-1">
+                                    <span className="flex items-center gap-1 text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                                      {s.label}
+                                      {isActive && <CheckIcon width={12} height={12} className="shrink-0 text-sky-600 dark:text-sky-400" aria-hidden />}
+                                    </span>
+                                    <span className="block truncate text-[11px] text-zinc-500">{s.blurb}</span>
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
                     </div>
+                  </>
+                )}
+              </div>
+              <div className="pointer-events-auto rounded-xl border border-zinc-200 bg-white/95 p-2.5 shadow-xl backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/95">
+                <div className="flex items-center gap-1.5">
+                  <span className="rounded bg-sky-600 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">Design</span>
+                  <span className="min-w-0 flex-1 truncate text-xs font-semibold text-zinc-900 dark:text-zinc-100">{objective.title}</span>
+                  {hasWon && <CheckIcon width={12} height={12} className="shrink-0 text-emerald-500" aria-hidden />}
+                  <button onClick={() => setBriefOpen((v) => !v)} aria-label={briefOpen ? 'Collapse brief' : 'Expand brief'} aria-expanded={briefOpen} className="rounded p-0.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                    {briefOpen ? <ChevronUpIcon width={13} height={13} aria-hidden /> : <ChevronDownIcon width={13} height={13} aria-hidden />}
+                  </button>
+                </div>
+                {briefOpen && (
+                  <div className="mt-1.5">
+                    <p className="text-[11px] leading-4 text-zinc-600 dark:text-zinc-400">{objective.description}</p>
+                    {mode === 'guided' && (
+                      <p className="mt-1 font-mono text-[10px] text-zinc-500">
+                        SLO:{' '}
+                        {[
+                          slo.p99LtMs !== undefined ? `p99 < ${slo.p99LtMs}ms` : null,
+                          slo.errLtPct !== undefined ? `errors < ${slo.errLtPct}%` : null,
+                          slo.minCompleted !== undefined ? `≥${slo.minCompleted} served` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' • ')}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+              {libOpen ? (
+                <aside className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white/95 shadow-xl backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/95" aria-label="Component library">
+                  <div className="flex items-center gap-1 border-b border-zinc-200 p-2 dark:border-zinc-700">
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700">
+                      <MagnifyingGlassIcon width={12} height={12} className="shrink-0 text-zinc-400" aria-hidden />
+                      <input
+                        value={paletteQuery}
+                        onChange={(e) => setPaletteQuery(e.target.value)}
+                        placeholder="Search components…"
+                        aria-label="Search components"
+                        className="w-full min-w-0 bg-transparent text-xs text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100"
+                      />
+                    </div>
+                    <button onClick={() => setLibOpen(false)} title="Collapse library" aria-label="Collapse library" className="rounded p-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                      <ChevronLeftIcon width={14} height={14} aria-hidden />
+                    </button>
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-y-auto">
+                    {PALETTE_GROUPS.map((group) => {
+                      const items = group.items.filter((k) => DESIGN_KIND_LABELS[k].toLowerCase().includes(paletteQuery.trim().toLowerCase()));
+                      if (items.length === 0) return null;
+                      return (
+                        <div key={group.title} className="border-b border-zinc-100 px-2 py-2 dark:border-zinc-800/60">
+                          <div className="px-1 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{group.title}</div>
+                          {items.map((kind) => (
+                            <div
+                              key={kind}
+                              role="button"
+                              tabIndex={0}
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData('application/x-design-kind', kind);
+                                e.dataTransfer.effectAllowed = 'move';
+                              }}
+                              onClick={() => addKind(kind)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  addKind(kind);
+                                }
+                              }}
+                              title={`Add ${DESIGN_KIND_LABELS[kind]}`}
+                              className="group flex cursor-grab items-center gap-2 rounded px-1.5 py-1.5 text-xs text-zinc-700 hover:bg-zinc-100 active:cursor-grabbing dark:text-zinc-300 dark:hover:bg-zinc-800"
+                            >
+                              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: KIND_ACCENT[kind] }} aria-hidden />
+                              <span className="flex-1 truncate">{DESIGN_KIND_LABELS[kind]}</span>
+                              <PlusIcon width={12} height={12} className="shrink-0 text-zinc-300 opacity-0 transition group-hover:opacity-100 dark:text-zinc-600" aria-hidden />
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                    <div className="px-2 py-2">
+                      <div className="px-1 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Annotate</div>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('application/x-studio-annot', 'note');
+                          e.dataTransfer.effectAllowed = 'move';
+                        }}
+                        onClick={() => placeNode({ tab: 'note' })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            placeNode({ tab: 'note' });
+                          }
+                        }}
+                        title="Sticky note — explain a decision inline"
+                        className="group flex cursor-grab items-center gap-2 rounded px-1.5 py-1.5 text-xs text-zinc-700 hover:bg-zinc-100 active:cursor-grabbing dark:text-zinc-300 dark:hover:bg-zinc-800"
+                      >
+                        <Pencil2Icon width={13} height={13} className="shrink-0 text-amber-500" aria-hidden />
+                        <span className="flex-1">Note</span>
+                        <PlusIcon width={12} height={12} className="shrink-0 text-zinc-300 opacity-0 transition group-hover:opacity-100 dark:text-zinc-600" aria-hidden />
+                      </div>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('application/x-studio-annot', 'section');
+                          e.dataTransfer.effectAllowed = 'move';
+                        }}
+                        onClick={() => placeNode({ tab: 'section' })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            placeNode({ tab: 'section' });
+                          }
+                        }}
+                        title="Section frame — group components under a labeled area"
+                        className="group flex cursor-grab items-center gap-2 rounded px-1.5 py-1.5 text-xs text-zinc-700 hover:bg-zinc-100 active:cursor-grabbing dark:text-zinc-300 dark:hover:bg-zinc-800"
+                      >
+                        <FrameIcon width={13} height={13} className="shrink-0 text-sky-500" aria-hidden />
+                        <span className="flex-1">Section</span>
+                        <PlusIcon width={12} height={12} className="shrink-0 text-zinc-300 opacity-0 transition group-hover:opacity-100 dark:text-zinc-600" aria-hidden />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="border-t border-zinc-200 px-3 py-1.5 text-[10px] leading-4 text-zinc-400 dark:border-zinc-700">
+                    Ctrl+Z undo · Ctrl+D duplicate · Del delete
+                  </div>
+                </aside>
+              ) : (
+                <div className="pointer-events-auto">
+                  <button onClick={() => setLibOpen(true)} title="Open component library" aria-label="Open component library" className="rounded-xl border border-zinc-200 bg-white/95 p-2 text-zinc-600 shadow-xl backdrop-blur hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900/95 dark:text-zinc-300 dark:hover:bg-zinc-800">
+                    <LayersIcon width={16} height={16} aria-hidden />
+                  </button>
+                </div>
+              )}
+            </div>
+            {rightOpen ? (
+              <div className="absolute bottom-3 right-3 top-3 z-10 flex w-80 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white/95 shadow-xl backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/95">
+                <div className="flex shrink-0 items-center gap-0.5 border-b border-zinc-200 p-1.5 dark:border-zinc-700" role="tablist" aria-label="Studio panel">
+                  {(['inspector', 'simulate', 'log'] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      role="tab"
+                      aria-selected={rightTab === tab}
+                      onClick={() => setRightTab(tab)}
+                      className={`rounded px-2 py-1 text-xs font-medium capitalize transition ${rightTab === tab ? 'bg-sky-600 text-white' : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'}`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+                  <button onClick={() => setRightOpen(false)} title="Collapse panel" aria-label="Collapse panel" className="ml-auto rounded p-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                    <ChevronRightIcon width={14} height={14} aria-hidden />
+                  </button>
+                </div>
+                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-2.5">
+                  {rightTab === 'inspector' && (
+                    <div>
+                      {selectedNodes.length === 0 && selectedEdges.length === 0 ? (
+                        <div className="rounded-lg border border-dashed border-zinc-300 p-3 text-[11px] leading-4 text-zinc-500 dark:border-zinc-700">
+                          Nothing selected. Click a component to rename it, drag a note to annotate, or Shift+drag to select several and group them into a section.
+                        </div>
+                      ) : (
+                        <div className="rounded-lg border border-sky-500/40 p-2.5 dark:border-sky-500/30" aria-label="Selection inspector">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                              {selectedNodes.length > 1
+                                ? `${selectedNodes.length} selected`
+                                : selectedNodes.length === 1
+                                  ? selectedNodes[0].type === 'note'
+                                    ? 'Note'
+                                    : selectedNodes[0].type === 'section'
+                                      ? 'Section'
+                                      : DESIGN_KIND_LABELS[(selectedNodes[0].data as unknown as CanvasNodeData).kind] ?? 'Component'
+                                  : `${selectedEdges.length} connection${selectedEdges.length === 1 ? '' : 's'}`}
+                            </span>
+                            <button onClick={deleteSelected} title="Delete selection (Del)" className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-zinc-500 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400">
+                              <TrashIcon width={12} height={12} aria-hidden />Delete
+                            </button>
+                          </div>
+                          {selectedNodes.length === 1 && selectedNodes[0].type === 'design' && (
+                            <label className="mt-2 block text-xs text-zinc-600 dark:text-zinc-300">
+                              Label
+                              <input
+                                value={(selectedNodes[0].data as unknown as CanvasNodeData).label}
+                                onFocus={() => studioEditBridge.begin?.()}
+                                onBlur={() => studioEditBridge.end?.()}
+                                onChange={(e) => {
+                                  const label = e.target.value;
+                                  const id = selectedNodes[0].id;
+                                  setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, label } } : n)));
+                                }}
+                                className="mt-1 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-800"
+                              />
+                            </label>
+                          )}
+                          {selectedNodes.length === 1 && selectedNodes[0].type === 'note' && (
+                            <div className="mt-2">
+                              <div className="flex gap-1.5" aria-label="Note color">
+                                {NOTE_COLORS.map((c) => (
+                                  <button
+                                    key={c}
+                                    onClick={() => {
+                                      studioEditBridge.begin?.();
+                                      const id = selectedNodes[0].id;
+                                      setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, color: c } } : n)));
+                                      studioEditBridge.end?.();
+                                    }}
+                                    title={c}
+                                    aria-label={`Note color ${c}`}
+                                    className={`h-5 w-5 rounded-full ring-offset-1 ${(selectedNodes[0].data as unknown as NoteNodeData).color === c ? 'ring-2 ring-sky-500' : 'ring-1 ring-black/20'}`}
+                                    style={{ background: c }}
+                                  />
+                                ))}
+                              </div>
+                              <textarea
+                                value={(selectedNodes[0].data as unknown as NoteNodeData).text}
+                                rows={3}
+                                onFocus={() => studioEditBridge.begin?.()}
+                                onBlur={() => studioEditBridge.end?.()}
+                                onChange={(e) => {
+                                  const text = e.target.value;
+                                  const id = selectedNodes[0].id;
+                                  setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, text } } : n)));
+                                }}
+                                placeholder="Write an annotation…"
+                                aria-label="Note text"
+                                className="mt-2 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-800"
+                              />
+                            </div>
+                          )}
+                          {selectedNodes.length === 1 && selectedNodes[0].type === 'section' && (
+                            <div className="mt-2">
+                              <label className="block text-xs text-zinc-600 dark:text-zinc-300">
+                                Title
+                                <input
+                                  value={(selectedNodes[0].data as unknown as SectionNodeData).title}
+                                  onFocus={() => studioEditBridge.begin?.()}
+                                  onBlur={() => studioEditBridge.end?.()}
+                                  onChange={(e) => {
+                                    const title = e.target.value;
+                                    const id = selectedNodes[0].id;
+                                    setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, title } } : n)));
+                                  }}
+                                  className="mt-1 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-800"
+                                />
+                              </label>
+                              <div className="mt-2 flex gap-1.5" aria-label="Section color">
+                                {(Object.keys(SECTION_STYLES) as SectionColor[]).map((c) => (
+                                  <button
+                                    key={c}
+                                    onClick={() => {
+                                      studioEditBridge.begin?.();
+                                      const id = selectedNodes[0].id;
+                                      setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, color: c } } : n)));
+                                      studioEditBridge.end?.();
+                                    }}
+                                    title={c}
+                                    aria-label={`Section color ${c}`}
+                                    className={`h-5 w-8 rounded ring-offset-1 ${(selectedNodes[0].data as unknown as SectionNodeData).color === c ? 'ring-2 ring-sky-500' : 'ring-1 ring-black/20'} ${SECTION_STYLES[c].chip}`}
+                                  />
+                                ))}
+                              </div>
+                              <button onClick={ungroupSelectedSections} className="mt-2 inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-sky-500/60 hover:text-sky-600 dark:border-zinc-700 dark:text-zinc-300">
+                                Ungroup section
+                              </button>
+                            </div>
+                          )}
+                          {selectedNodes.length > 1 && (
+                            <button onClick={groupIntoSection} className="mt-2 inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-sky-500/60 hover:text-sky-600 dark:border-zinc-700 dark:text-zinc-300">
+                              <GroupIcon width={12} height={12} aria-hidden />Group into section
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {rightTab === 'simulate' && (
+                    <div className="flex flex-col gap-2.5">
+                      <div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Live metrics</span>
+                          <span className="font-mono text-xs text-zinc-500">{fmtClock(clock)} · {speed}×</span>
+                        </div>
+                        <div className="mt-1 grid grid-cols-3 gap-2 text-center font-mono">
+                          <div className="rounded bg-zinc-50 px-1 py-1.5 dark:bg-zinc-950"><div className="flex items-center justify-center gap-1 text-[10px] text-zinc-500"><TimerIcon width={11} height={11} aria-hidden />p99</div><div className="text-sm text-emerald-600 dark:text-emerald-400">{metrics ? `${metrics.p99Ms}ms` : '—'}</div></div>
+                          <div className="rounded bg-zinc-50 px-1 py-1.5 dark:bg-zinc-950"><div className="flex items-center justify-center gap-1 text-[10px] text-zinc-500"><ExclamationTriangleIcon width={11} height={11} aria-hidden />errors</div><div className={`text-sm ${metrics && metrics.errPct > 5 ? 'text-red-600 dark:text-red-400' : 'text-zinc-500 dark:text-zinc-200'}`}>{metrics ? `${metrics.errPct}%` : '—'}</div></div>
+                          <div className="rounded bg-zinc-50 px-1 py-1.5 dark:bg-zinc-950"><div className="flex items-center justify-center gap-1 text-[10px] text-zinc-500"><ActivityLogIcon width={11} height={11} aria-hidden />rps</div><div className="text-sm text-sky-600 dark:text-sky-400">{metrics ? metrics.rps : '—'}</div></div>
+                        </div>
+                        <div className="mt-2 flex h-8 items-end gap-[2px]" aria-hidden>
+                          {spark.map((v, i) => (
+                            <div key={i} className="min-w-[2px] flex-1 rounded-sm bg-sky-500/60" style={{ height: `${Math.min(100, Math.max(4, (v / Math.max(1, ...spark)) * 100))}%` }} />
+                          ))}
+                          {spark.length === 0 && <div className="text-[10px] text-zinc-600">throughput history appears while playing</div>}
+                        </div>
+                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-zinc-600 dark:text-zinc-300">
+                          <label className="block">QPS <span className="font-mono">{qps}</span>
+                            <input type="range" min={10} max={3000} step={10} value={qps} onChange={(e) => onQps(Number(e.target.value))} className="mt-1 w-full" aria-label="Queries per second" />
+                          </label>
+                          <label className="block">Reads <span className="font-mono">{readPct}%</span>
+                            <input type="range" min={0} max={100} step={5} value={readPct} onChange={(e) => onReadPct(Number(e.target.value))} className="mt-1 w-full" aria-label="Read percentage" />
+                          </label>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Chaos</div>
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          <button onClick={() => fireManual('spike')} className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-amber-500/60 hover:text-amber-600 dark:border-zinc-700 dark:text-zinc-300"><LightningBoltIcon width={13} height={13} className="shrink-0" aria-hidden />Spike</button>
+                          <button onClick={() => fireManual('fail', 'app')} className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-red-500/60 hover:text-red-500 dark:border-zinc-700 dark:text-zinc-300"><CrossCircledIcon width={13} height={13} className="shrink-0" aria-hidden />Kill app</button>
+                          <button onClick={() => fireManual('fail', 'sql')} className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-red-500/60 hover:text-red-500 dark:border-zinc-700 dark:text-zinc-300"><CrossCircledIcon width={13} height={13} className="shrink-0" aria-hidden />Kill SQL</button>
+                          <button onClick={() => fireManual('fail', 'auth')} className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-red-500/60 hover:text-red-500 dark:border-zinc-700 dark:text-zinc-300"><CrossCircledIcon width={13} height={13} className="shrink-0" aria-hidden />Kill auth</button>
+                          <button onClick={() => fireManual('heal', 'app')} className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-emerald-500/60 hover:text-emerald-600 dark:border-zinc-700 dark:text-zinc-300"><CheckCircledIcon width={13} height={13} className="shrink-0" aria-hidden />Heal app</button>
+                          <button onClick={() => fireManual('heal', 'sql')} className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-emerald-500/60 hover:text-emerald-600 dark:border-zinc-700 dark:text-zinc-300"><CheckCircledIcon width={13} height={13} className="shrink-0" aria-hidden />Heal SQL</button>
+                          <button onClick={() => fireManual('heal', 'auth')} className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-emerald-500/60 hover:text-emerald-600 dark:border-zinc-700 dark:text-zinc-300"><CheckCircledIcon width={13} height={13} className="shrink-0" aria-hidden />Heal auth</button>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <div className="flex overflow-hidden rounded border border-zinc-200 dark:border-zinc-700" role="tablist" aria-label={t(locale, 'canvasDirection')}>
+                          {(['vertical', 'horizontal'] as const).map((d) => (
+                            <button
+                              key={d}
+                              role="tab"
+                              aria-selected={direction === d}
+                              title={t(locale, d === 'vertical' ? 'topDownView' : 'leftRightView')}
+                              onClick={() => { if (direction !== d) toggleDirection(); }}
+                              className={`px-2 py-1 text-xs font-medium capitalize transition ${direction === d ? 'bg-sky-600 text-white' : 'bg-white text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
+                            >
+                              {t(locale, d === 'vertical' ? 'topDown' : 'horizontal')}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex overflow-hidden rounded border border-zinc-200 dark:border-zinc-700" role="tablist" aria-label={t(locale, 'simulationMode')}>
+                          {([{ id: 'guided', Icon: TargetIcon }, { id: 'free', Icon: CubeIcon }] as const).map(({ id: m, Icon }) => (
+                            <button
+                              key={m}
+                              role="tab"
+                              aria-selected={mode === m}
+                              onClick={() => { setMode(m); setHasWon(false); }}
+                              className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium capitalize transition ${mode === m ? 'bg-sky-600 text-white' : 'bg-white text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
+                            >
+                              <Icon width={12} height={12} className="shrink-0" aria-hidden />
+                              {m}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          onClick={() => setShowHints((v) => !v)}
+                          className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition ${showHints ? 'bg-sky-600 text-white' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
+                        >
+                          <QuestionMarkCircledIcon width={13} height={13} className="shrink-0" aria-hidden />
+                          {t(locale, 'patterns')}
+                        </button>
+                        <button
+                          onClick={() => restartRun('Canvas reset')}
+                          className="inline-flex items-center gap-1 rounded bg-zinc-100 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                        >
+                          <ResetIcon width={13} height={13} className="shrink-0" aria-hidden />
+                          {t(locale, 'reset')}
+                        </button>
+                        <button
+                          onClick={() => setStatus(skillId, status === 'completed' ? 'in-progress' : 'completed')}
+                          className={`inline-flex items-center gap-1 rounded px-3 py-1 text-xs font-semibold transition ${status === 'completed' || hasWon ? 'bg-emerald-600 text-white hover:bg-emerald-500' : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700'}`}
+                        >
+                          {(status === 'completed' || hasWon) && <CheckIcon width={13} height={13} className="shrink-0" aria-hidden />}
+                          {status === 'completed' ? t(locale, 'completed') : t(locale, 'markComplete')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {rightTab === 'log' && (
+                    <div className="flex min-h-0 flex-1 flex-col gap-2">
+                      <div>
+                        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-500"><MagnifyingGlassIcon width={13} height={13} aria-hidden />Inspect a request</div>
+                        <div className="mt-1 flex gap-1.5">
+                          <select value={inspectId} onChange={(e) => setInspectId(e.target.value === '' ? '' : Number(e.target.value))} className="min-w-0 flex-1 rounded border border-zinc-300 bg-white px-2 py-1 font-mono text-xs dark:border-zinc-700 dark:bg-zinc-800" aria-label="Select request to inspect">
+                            <option value="">{recentTraces.length === 0 ? 'Run or step to capture requests' : 'Pick a request…'}</option>
+                            {recentTraces.map((tr) => (
+                              <option key={tr.id} value={tr.id}>req#{tr.id} · {tr.latencyMs}ms{tr.hit ? ' · HIT' : ''}{tr.error ? ` · ${tr.error}` : ''}</option>
+                            ))}
+                          </select>
+                        </div>
+                        {inspected && (
+                          <ol className="mt-2 space-y-0.5 font-mono text-[11px] leading-4">
+                            {inspected.hops.map((h, i) => (
+                              <li key={i} className="text-zinc-700 dark:text-zinc-300"><span className="text-sky-600 dark:text-sky-400">{i + 1}.</span> {h.nodeId} <span className="text-zinc-500">+{Math.round((h.departed - h.arrived) * 1000)}ms</span></li>
+                            ))}
+                            <li className="pt-1 text-emerald-700 dark:text-emerald-300">= {inspected.latencyMs}ms total{inspected.hit ? ' (cache hit)' : ''}{inspected.error ? ` — ${inspected.error}` : ''}</li>
+                          </ol>
+                        )}
+                      </div>
+                      <div ref={logRef} className="min-h-[120px] flex-1 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950 p-3 font-mono text-xs leading-5" aria-label="Simulation event log" aria-live="off">
+                        {log.length === 0 && <span className="text-zinc-500">Event log — play the simulation and watch requests, spikes, and failures stream by.</span>}
+                        {log.map((line, i) => (
+                          <div key={`${i}-${line.slice(0, 12)}`} className={line.startsWith('…') ? 'text-zinc-500' : line.startsWith('Add a') || line.startsWith('Connect') || line.startsWith('No request') || line.startsWith('A connection') ? 'text-red-400' : line.includes('failed') || line.includes('Spike') || line.includes('spike') ? 'text-amber-300' : line.includes('recovered') || line.includes('Objective') ? 'text-emerald-300' : 'text-zinc-300'}>{line}</div>
+                        ))}
+                        {mode === 'guided' && hasWon && <div className="mt-1 font-sans text-xs font-semibold text-emerald-600 dark:text-emerald-400">{preset.objective.winMessage}</div>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => setRightOpen(true)} title="Open studio panel" aria-label="Open studio panel" className="absolute right-3 top-3 z-10 rounded-xl border border-zinc-200 bg-white/95 p-2 text-zinc-600 shadow-xl backdrop-blur hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900/95 dark:text-zinc-300 dark:hover:bg-zinc-800">
+                <MixerHorizontalIcon width={16} height={16} aria-hidden />
+              </button>
+            )}
+            <div className="absolute left-1/2 top-[58px] z-10 -translate-x-1/2" aria-label={t(locale, 'playbackControls')}>
+              <div className="flex flex-wrap items-center justify-center gap-1 rounded-xl border border-zinc-200 bg-white/95 px-2 py-1.5 shadow-xl backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/95">
+                {phase !== 'playing' ? (
+                  <button onClick={onPlay} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500"><PlayIcon width={13} height={13} className="shrink-0" aria-hidden />{t(locale, 'play')}</button>
+                ) : (
+                  <button onClick={onPause} className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-400"><PauseIcon width={13} height={13} className="shrink-0" aria-hidden />{t(locale, 'pause')}</button>
+                )}
+                <button onClick={onStepOnce} title="Advance 0.2 simulated seconds" className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-100 px-2.5 py-1 text-xs text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"><TrackNextIcon width={13} height={13} className="shrink-0" aria-hidden />{t(locale, 'step')}</button>
+                <div className="flex overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700" aria-label="Speed">
+                  {[1, 2, 4].map((s) => (
+                    <button key={s} onClick={() => setSpeed(s)} aria-pressed={speed === s} className={`px-2 py-1 font-mono text-xs transition ${speed === s ? 'bg-sky-600 text-white' : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}>{s}×</button>
                   ))}
                 </div>
-              );
-            })}
-            <div className="px-2 py-2">
-              <div className="px-1 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Annotate</div>
-              <div
-                role="button"
-                tabIndex={0}
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('application/x-studio-annot', 'note');
-                  e.dataTransfer.effectAllowed = 'move';
-                }}
-                onClick={() => placeNode({ tab: 'note' })}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    placeNode({ tab: 'note' });
-                  }
-                }}
-                title="Sticky note — explain a decision inline"
-                className="group flex cursor-grab items-center gap-2 rounded px-1.5 py-1.5 text-xs text-zinc-700 hover:bg-zinc-100 active:cursor-grabbing dark:text-zinc-300 dark:hover:bg-zinc-800"
-              >
-                <Pencil2Icon width={13} height={13} className="shrink-0 text-amber-500" aria-hidden />
-                <span className="flex-1">Note</span>
-                <PlusIcon width={12} height={12} className="shrink-0 text-zinc-300 opacity-0 transition group-hover:opacity-100 dark:text-zinc-600" aria-hidden />
-              </div>
-              <div
-                role="button"
-                tabIndex={0}
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('application/x-studio-annot', 'section');
-                  e.dataTransfer.effectAllowed = 'move';
-                }}
-                onClick={() => placeNode({ tab: 'section' })}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    placeNode({ tab: 'section' });
-                  }
-                }}
-                title="Section frame — group components under a labeled area"
-                className="group flex cursor-grab items-center gap-2 rounded px-1.5 py-1.5 text-xs text-zinc-700 hover:bg-zinc-100 active:cursor-grabbing dark:text-zinc-300 dark:hover:bg-zinc-800"
-              >
-                <FrameIcon width={13} height={13} className="shrink-0 text-sky-500" aria-hidden />
-                <span className="flex-1">Section</span>
-                <PlusIcon width={12} height={12} className="shrink-0 text-zinc-300 opacity-0 transition group-hover:opacity-100 dark:text-zinc-600" aria-hidden />
+                <span className="inline-flex items-center gap-1 px-1 font-mono text-xs text-zinc-500"><ClockIcon width={12} height={12} aria-hidden />{fmtClock(clock)}</span>
+                <span className="mx-1 h-4 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
+                <span className="inline-flex items-center gap-0.5" aria-label="Canvas status">
+                  <button onClick={() => setShowMap((v) => !v)} aria-pressed={showMap} title="Toggle minimap" className={`rounded px-1.5 py-1 font-mono text-[10px] ${showMap ? 'bg-sky-600 text-white' : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'}`}>MAP</button>
+                  <button onClick={() => reactFlowRef.current?.zoomOut()} title="Zoom out" aria-label="Zoom out" className="rounded p-1 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"><MinusIcon width={13} height={13} aria-hidden /></button>
+                  <span className="min-w-9 text-center font-mono text-[11px] text-zinc-500">{Math.round(zoom * 100)}%</span>
+                  <button onClick={() => reactFlowRef.current?.zoomIn()} title="Zoom in" aria-label="Zoom in" className="rounded p-1 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"><PlusIcon width={13} height={13} aria-hidden /></button>
+                  <button onClick={() => reactFlowRef.current?.fitView({ padding: 0.2 })} title="Fit canvas to view" aria-label="Fit canvas to view" className="rounded p-1 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"><EnterFullScreenIcon width={13} height={13} aria-hidden /></button>
+                </span>
               </div>
             </div>
-            <div className="mt-auto px-3 py-2 text-[10px] leading-4 text-zinc-400">
-              Ctrl+Z undo · Ctrl+D duplicate · Del delete · Shift+drag selects
-            </div>
-          </aside>
+          </div>
         )}
+        {layout !== 'studio' && (
         <ResizableSplit
           storageKey="backend-roadmap:split:design-inner"
-          defaultPct={layout === 'studio' ? 62 : 55}
-          minPct={30}
+          defaultPct={55}
           maxPct={70}
           left={
             <div ref={flowWrapperRef} className="relative h-full min-h-[300px]">
@@ -1719,48 +2209,8 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
             </div>
           }
         />
+        )}
       </div>
-      {layout === 'studio' && (
-        <div className="flex shrink-0 items-center gap-3 border-t border-zinc-200 bg-white px-4 py-1.5 text-[11px] text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400" aria-label="Canvas status">
-          <span className="hidden font-mono xl:inline">SCROLL TO PAN · CTRL+SCROLL TO ZOOM · SHIFT+DRAG TO SELECT</span>
-          <span className="font-mono">{designCount} COMPONENTS · {edges.length} CONNECTIONS</span>
-          <span className="ml-auto inline-flex items-center gap-1">
-            <button
-              onClick={() => setShowMap((v) => !v)}
-              aria-pressed={showMap}
-              title="Toggle minimap"
-              className={`rounded px-1.5 py-0.5 font-mono ${showMap ? 'bg-sky-600 text-white' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
-            >
-              MAP
-            </button>
-            <button
-              onClick={() => reactFlowRef.current?.zoomOut()}
-              title="Zoom out"
-              aria-label="Zoom out"
-              className="rounded px-1.5 py-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            >
-              <MinusIcon width={12} height={12} aria-hidden />
-            </button>
-            <span className="min-w-10 text-center font-mono">{Math.round(zoom * 100)}%</span>
-            <button
-              onClick={() => reactFlowRef.current?.zoomIn()}
-              title="Zoom in"
-              aria-label="Zoom in"
-              className="rounded px-1.5 py-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            >
-              <PlusIcon width={12} height={12} aria-hidden />
-            </button>
-            <button
-              onClick={() => reactFlowRef.current?.fitView({ padding: 0.2 })}
-              title="Fit canvas to view"
-              aria-label="Fit canvas to view"
-              className="rounded px-1.5 py-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            >
-              <EnterFullScreenIcon width={12} height={12} aria-hidden />
-            </button>
-          </span>
-        </div>
-      )}
 
       {showHints && (
         <div className="max-h-[40vh] overflow-auto border-t border-zinc-200 bg-white px-4 py-3 text-xs leading-5 text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
