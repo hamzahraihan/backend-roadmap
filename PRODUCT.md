@@ -45,7 +45,7 @@ A neighboring product could not truthfully copy "run four languages of backend c
 
 ## Brand Commitments
 
-- **Name:** "Backend Roadmap" is the committed product name; do not rebrand.
+- **Name:** "Dissect" is the committed product name.
 - **Voice/tone:** neutral, practical, and instructional; no hype or marketing flourish.
 - No logo, color, or typography is committed yet (visual world is established later in new-work / document).
 
