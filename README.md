@@ -1,4 +1,4 @@
-# Backend Roadmap
+# Dissect
 
 An interactive backend proficiency platform: a navigable skill graph where each topic opens a hands-on workspace — read a concise explanation, run real code, and track your coverage.
 
