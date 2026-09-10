@@ -5,6 +5,8 @@ import {
   BackgroundVariant,
   Controls,
   Handle,
+  MiniMap,
+  NodeResizer,
   Position,
   MarkerType,
   BaseEdge,
@@ -30,21 +32,29 @@ import {
   CheckCircledIcon,
   CheckIcon,
   ClockIcon,
+  CopyIcon,
   Cross1Icon,
   CrossCircledIcon,
   CubeIcon,
+  EnterFullScreenIcon,
   ExclamationTriangleIcon,
+  FrameIcon,
+  GroupIcon,
   LightningBoltIcon,
   Link2Icon,
   MagnifyingGlassIcon,
+  MinusIcon,
   PauseIcon,
+  Pencil2Icon,
   PlayIcon,
   PlusIcon,
   QuestionMarkCircledIcon,
+  ReloadIcon,
   ResetIcon,
   TargetIcon,
   TimerIcon,
   TrackNextIcon,
+  TrashIcon,
 } from '@radix-ui/react-icons';
 import { simulateTraffic, validateTopology } from '../../lib/design/engine';
 import { createRun, type RequestTrace, type RunEvent, type RunHandle, type RunSummary } from '../../lib/design/player';
@@ -73,6 +83,59 @@ function layoutPos(i: number, direction: FlowDirection): { x: number; y: number 
     ? { x: i * 250, y: 60 + (i % 2) * 150 }
     : { x: 60 + (i % 2) * 220, y: i * 130 };
 }
+/** Figma-style annotation nodes. Notes/sections never enter the sim topology. */
+export type SectionColor = 'blue' | 'green' | 'amber' | 'purple' | 'red';
+
+export interface NoteNodeData {
+  text: string;
+  color: string;
+  [key: string]: unknown;
+}
+
+export interface SectionNodeData {
+  title: string;
+  color: SectionColor;
+  [key: string]: unknown;
+}
+
+export const SECTION_STYLES: Record<SectionColor, { border: string; bg: string; chip: string }> = {
+  blue: { border: 'border-sky-500/70', bg: 'bg-sky-500/[0.07]', chip: 'bg-sky-500/90' },
+  green: { border: 'border-emerald-500/70', bg: 'bg-emerald-500/[0.07]', chip: 'bg-emerald-500/90' },
+  amber: { border: 'border-amber-500/70', bg: 'bg-amber-500/[0.07]', chip: 'bg-amber-500/90' },
+  purple: { border: 'border-violet-500/70', bg: 'bg-violet-500/[0.07]', chip: 'bg-violet-500/90' },
+  red: { border: 'border-red-500/70', bg: 'bg-red-500/[0.07]', chip: 'bg-red-500/90' },
+};
+
+export const NOTE_COLORS = ['#fcd34d', '#7dd3fc', '#6ee7b7', '#f9a8d4', '#c4b5fd'];
+
+const PALETTE_GROUPS: { title: string; items: DesignKind[] }[] = [
+  { title: 'Edge', items: ['client', 'dns', 'cdn', 'waf', 'lb', 'gateway'] },
+  { title: 'Logic', items: ['app', 'auth', 'ratelimit', 'search'] },
+  { title: 'Data', items: ['sql', 'nosql', 'cache', 'storage', 'queue'] },
+];
+
+const KIND_ACCENT: Record<DesignKind, string> = {
+  client: '#38bdf8',
+  dns: '#38bdf8',
+  cdn: '#38bdf8',
+  waf: '#38bdf8',
+  lb: '#38bdf8',
+  gateway: '#38bdf8',
+  ratelimit: '#f59e0b',
+  auth: '#a78bfa',
+  app: '#a78bfa',
+  cache: '#34d399',
+  search: '#a78bfa',
+  sql: '#34d399',
+  nosql: '#34d399',
+  queue: '#34d399',
+  storage: '#34d399',
+};
+
+
+/** Bridge so inline note/section editors can bracket one undo step per edit session. */
+export const studioEditBridge: { begin: (() => void) | null; end: (() => void) | null } = { begin: null, end: null };
+
 
 function DesignCanvasNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as CanvasNodeData;
@@ -99,7 +162,10 @@ function DesignCanvasNode({ id, data, selected }: NodeProps) {
     >
       <Handle type="target" position={horizontal ? Position.Left : Position.Top} className="!h-2 !w-2 !border-0 !bg-zinc-500" />
       <div className="flex items-center justify-between gap-1">
-        <div className="truncate text-xs font-semibold text-zinc-900 dark:text-zinc-100">{d.label}</div>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: KIND_ACCENT[d.kind] }} aria-hidden />
+          <div className="truncate text-xs font-semibold text-zinc-900 dark:text-zinc-100">{d.label}</div>
+        </div>
         {d.failed && <Cross1Icon width={10} height={10} className="shrink-0 text-red-500" aria-hidden />}
       </div>
       <div className="mt-0.5 text-[10px] uppercase tracking-wide text-zinc-500">{DESIGN_KIND_LABELS[d.kind]}</div>
@@ -131,8 +197,58 @@ function DesignCanvasNode({ id, data, selected }: NodeProps) {
     </div>
   );
 }
+function NoteNode({ data, selected }: NodeProps) {
+  const d = data as unknown as NoteNodeData;
+  const { setNodes } = useReactFlow();
+  return (
+    <div
+      className={`relative h-full w-full rounded-md p-2 shadow-lg transition ${selected ? 'ring-2 ring-sky-500' : 'ring-1 ring-black/20'}`}
+      style={{ background: d.color, minWidth: 140, minHeight: 100 }}
+    >
+      <NodeResizer isVisible={selected} minWidth={140} minHeight={100} lineClassName="!border-sky-500" handleClassName="!h-2 !w-2 !border-0 !bg-sky-500" />
+      <textarea
+        value={d.text}
+        rows={4}
+        placeholder="Double-click canvas note…"
+        aria-label="Canvas note"
+        onFocus={() => studioEditBridge.begin?.()}
+        onBlur={() => studioEditBridge.end?.()}
+        onChange={(e) => {
+          const text = e.target.value;
+          setNodes((nds) => nds.map((n) => (n.data === data ? { ...n, data: { ...n.data, text } } : n)));
+        }}
+        className="nodrag h-full w-full resize-none bg-transparent text-xs leading-4 text-zinc-900 outline-none placeholder:text-zinc-900/40"
+      />
+    </div>
+  );
+}
 
-const nodeTypes = { design: DesignCanvasNode };
+function SectionNode({ data, selected }: NodeProps) {
+  const d = data as unknown as SectionNodeData;
+  const { setNodes } = useReactFlow();
+  const style = SECTION_STYLES[d.color] ?? SECTION_STYLES.blue;
+  return (
+    <div className={`relative h-full w-full rounded-xl border-2 ${style.border} ${style.bg} transition ${selected ? 'ring-2 ring-sky-500/60' : ''}`}>
+      <NodeResizer isVisible={selected} minWidth={280} minHeight={160} lineClassName="!border-sky-500" handleClassName="!h-2 !w-2 !border-0 !bg-sky-500" />
+      <div className="absolute -top-3 left-3 flex items-center gap-1">
+        <input
+          value={d.title}
+          aria-label="Section title"
+          onFocus={() => studioEditBridge.begin?.()}
+          onBlur={() => studioEditBridge.end?.()}
+          onChange={(e) => {
+            const title = e.target.value;
+            setNodes((nds) => nds.map((n) => (n.data === data ? { ...n, data: { ...n.data, title } } : n)));
+          }}
+          className={`nodrag rounded px-2 py-0.5 text-[11px] font-semibold text-white outline-none ${style.chip}`}
+          style={{ width: `${Math.max(80, d.title.length * 7 + 24)}px` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+const nodeTypes = { design: DesignCanvasNode, note: NoteNode, section: SectionNode };
 
 export type FlowEdgeData = {
   /** 0..1 traffic intensity from live sim snapshot — drives dash speed + pulse count */
@@ -279,11 +395,61 @@ function toFlowEdges(state: ReturnType<typeof initialStateFor>): Edge[] {
     style: { stroke: '#71717a', strokeWidth: 2.5 },
   }));
 }
+let studioSeq = 0;
+
+function nextStudioId(prefix: string): string {
+  studioSeq += 1;
+  return `${prefix}-${Date.now().toString(36)}-${studioSeq}`;
+}
+
+function makeDesignNode(kind: DesignKind, position: { x: number; y: number }, direction: FlowDirection, parentId?: string): Node {
+  const n = starterNode(kind, kind);
+  return {
+    id: n.id,
+    type: 'design',
+    position,
+    parentId,
+    selected: true,
+    data: { kind, label: DESIGN_KIND_LABELS[kind], bottleneck: false, failed: false, queued: 0, direction } satisfies CanvasNodeData,
+  };
+}
+
+function makeNoteNode(position: { x: number; y: number }, parentId?: string): Node {
+  return {
+    id: nextStudioId('note'),
+    type: 'note',
+    position,
+    parentId,
+    selected: true,
+    style: { width: 180, height: 140 },
+    data: { text: '', color: NOTE_COLORS[0] } satisfies NoteNodeData,
+  };
+}
+
+function makeSectionNode(position: { x: number; y: number }, width = 520, height = 260): Node {
+  return {
+    id: nextStudioId('section'),
+    type: 'section',
+    position,
+    selected: true,
+    style: { width, height },
+    zIndex: -10,
+    data: { title: 'New section', color: 'blue' } satisfies SectionNodeData,
+  };
+}
+
+function sectionAt(nodes: Node[], at: { x: number; y: number }): Node | undefined {
+  return nodes.find((n) => {
+    if (n.type !== 'section') return false;
+    const w = Number(n.style?.width ?? n.width ?? 520);
+    const h = Number(n.style?.height ?? n.height ?? 260);
+    return at.x >= n.position.x && at.x <= n.position.x + w && at.y >= n.position.y && at.y <= n.position.y + h;
+  });
+}
 
 function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStageProps) {
   const locale = useUILocale();
   const { getStatus, setStatus } = useProgressContext();
-  const status = getStatus(skillId);
   const theme = useTheme();
   const [activeScenario, setActiveScenario] = useState(scenarioId ?? skillId);
   const preset = useMemo(() => getPreset(activeScenario), [activeScenario]);
@@ -320,18 +486,94 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
   const lastTraceIdRef = useRef(0);
   const lastRpsSimRef = useRef(0);
   const nodesRef = useRef<Node[]>([]);
-  const logRef = useRef<HTMLDivElement>(null);
-  const flowWrapperRef = useRef<HTMLDivElement>(null);
-  const reactFlowRef = useRef<ReactFlowInstance | null>(null);
+  const edgesRef = useRef<Edge[]>([]);
   useEffect(() => {
     nodesRef.current = nodes;
   }, [nodes]);
+  useEffect(() => {
+    edgesRef.current = edges;
+  }, [edges]);
+  const logRef = useRef<HTMLDivElement>(null);
+  const flowWrapperRef = useRef<HTMLDivElement>(null);
+  const reactFlowRef = useRef<ReactFlowInstance | null>(null);
 
-  // (re)initialize canvas when scenario changes
+  // ---- Figma-style studio state: undo/redo history, persistence, canvas chrome ----
+  interface HistorySnap { nodes: Node[]; edges: Edge[]; }
+  const pastRef = useRef<HistorySnap[]>([]);
+  const futureRef = useRef<HistorySnap[]>([]);
+  const editSnapshotRef = useRef<HistorySnap | null>(null);
+  const dragSnapshotRef = useRef<HistorySnap | null>(null);
+  const [, setHistTick] = useState(0);
+  const [paletteQuery, setPaletteQuery] = useState('');
+  const [zoom, setZoom] = useState(1);
+  const [showMap, setShowMap] = useState(true);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const studioKey = `backend-roadmap:studio:${preset.id}`;
+  const canUndo = pastRef.current.length > 0;
+  const canRedo = futureRef.current.length > 0;
+
+  const pushHistory = useCallback((snap?: HistorySnap) => {
+    pastRef.current.push(
+      snap ?? { nodes: JSON.parse(JSON.stringify(nodesRef.current)), edges: JSON.parse(JSON.stringify(edgesRef.current)) },
+    );
+    if (pastRef.current.length > 60) pastRef.current.shift();
+    futureRef.current = [];
+    setHistTick((v) => v + 1);
+  }, []);
+
+  // Inline note/section editors bracket one undo step per edit session.
+  useEffect(() => {
+    studioEditBridge.begin = () => {
+      if (!editSnapshotRef.current) {
+        editSnapshotRef.current = {
+          nodes: JSON.parse(JSON.stringify(nodesRef.current)),
+          edges: JSON.parse(JSON.stringify(edgesRef.current)),
+        };
+      }
+    };
+    studioEditBridge.end = () => {
+      const snap = editSnapshotRef.current;
+      editSnapshotRef.current = null;
+      if (snap) pushHistory(snap);
+    };
+    return () => {
+      studioEditBridge.begin = null;
+      studioEditBridge.end = null;
+    };
+  }, [pushHistory]);
+
+  // (re)initialize canvas when scenario changes — restore autosaved canvas when present
   useEffect(() => {
     const fresh = initialStateFor(preset.id);
-    setNodes(toFlowNodes(fresh, direction));
-    setEdges(toFlowEdges(fresh));
+    let restored: { nodes: Node[]; edges: Edge[] } | null = null;
+    try {
+      const raw = localStorage.getItem(studioKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { nodes?: Node[]; edges?: Edge[] };
+        if (Array.isArray(parsed.nodes) && Array.isArray(parsed.edges) && parsed.nodes.length > 0) {
+          const nodeIds = new Set(parsed.nodes.filter((n) => n && typeof n.id === 'string').map((n) => n.id));
+          restored = {
+            nodes: parsed.nodes
+              .filter((n) => n && typeof n.id === 'string')
+              .map((n) => ({
+                ...n,
+                selected: false,
+                data:
+                  n.type === 'note'
+                    ? { text: '', color: NOTE_COLORS[0], ...((n.data as object) ?? {}) }
+                    : n.type === 'section'
+                      ? { title: 'Section', color: 'blue' as SectionColor, ...((n.data as object) ?? {}) }
+                      : { bottleneck: false, failed: false, queued: 0, direction, ...((n.data as object) ?? {}) },
+              })) as Node[],
+            edges: parsed.edges.filter((e) => e && nodeIds.has(e.source) && nodeIds.has(e.target)).map((e) => ({ ...e, selected: false })) as Edge[],
+          };
+        }
+      }
+    } catch {
+      restored = null;
+    }
+    setNodes(restored?.nodes ?? toFlowNodes(fresh, direction));
+    setEdges(restored?.edges ?? toFlowEdges(fresh));
     handleRef.current = null;
     setPhase('idle');
     setClock(0);
@@ -344,8 +586,48 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
     firedRef.current = 0;
     failedRef.current = new Set();
     failureSeenRef.current = null;
+    pastRef.current = [];
+    futureRef.current = [];
+    editSnapshotRef.current = null;
+    setHistTick((v) => v + 1);
     setReady(true);
   }, [preset.id, setNodes, setEdges]);
+
+  // Autosave canvas (components, connections, notes, sections) per scenario.
+  useEffect(() => {
+    if (!ready) return;
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(
+          studioKey,
+          JSON.stringify({
+            nodes: nodesRef.current.map((n) => ({
+              id: n.id,
+              type: n.type,
+              position: n.position,
+              data: n.data,
+              style: n.style,
+              parentId: n.parentId,
+              zIndex: n.zIndex,
+            })),
+            edges: edgesRef.current.map((e) => ({
+              id: e.id,
+              source: e.source,
+              target: e.target,
+              type: e.type,
+              data: e.data,
+              markerEnd: e.markerEnd,
+              style: e.style,
+            })),
+          }),
+        );
+        setSavedAt(new Date());
+      } catch {
+        // Storage full or blocked — canvas keeps working in memory.
+      }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [nodes, edges, ready, studioKey]);
 
   const fmtClock = useCallback((t: number) => `t+${t.toFixed(1)}s`, []);
 
@@ -376,10 +658,12 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
 
   const deriveTopology = useCallback(
     () => ({
-      nodes: nodes.map((n) => {
-        const d = n.data as unknown as CanvasNodeData;
-        return { id: n.id, kind: d.kind };
-      }),
+      nodes: nodes
+        .filter((n) => n.type === 'design')
+        .map((n) => {
+          const d = n.data as unknown as CanvasNodeData;
+          return { id: n.id, kind: d.kind };
+        }),
       edges: edges.map((e, i) => ({ from: e.source, to: e.target, id: e.id || `e-${i}` })),
     }),
     [nodes, edges],
@@ -415,10 +699,12 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
     (summary: RunSummary) => {
       if (mode === 'free' || hasWon) return;
       const canvasState = {
-        nodes: nodes.map((n) => {
-          const d = n.data as unknown as CanvasNodeData;
-          return { id: n.id, kind: d.kind, label: typeof d.label === 'string' ? d.label : d.kind };
-        }),
+        nodes: nodes
+          .filter((n) => n.type === 'design')
+          .map((n) => {
+            const d = n.data as unknown as CanvasNodeData;
+            return { id: n.id, kind: d.kind, label: typeof d.label === 'string' ? d.label : d.kind };
+          }),
         edges: edges.map((e, i) => ({ id: e.id || `e-${i}`, from: e.source, to: e.target })),
         scenario: { qps, readRatio: readPct / 100, failedKind: failureSeenRef.current },
       };
@@ -605,19 +891,238 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
   // structural canvas changes only (drag/select pass through silently)
   const handleNodesChange = useCallback(
     (changes: Parameters<typeof onNodesChange>[0]) => {
+      const removed = changes.filter((c) => c.type === 'remove');
+      if (removed.length > 0) {
+        pushHistory();
+        const byId = new Map(nodesRef.current.map((n) => [n.id, n]));
+        if (removed.some((c) => (c.type === 'remove' ? byId.get(c.id)?.type !== 'note' && byId.get(c.id)?.type !== 'section' : false))) touchTopology();
+      }
       onNodesChange(changes);
-      if (changes.some((c) => c.type === 'remove')) touchTopology();
     },
-    [onNodesChange, touchTopology],
+    [onNodesChange, pushHistory, touchTopology],
   );
 
   const handleEdgesChange = useCallback(
     (changes: Parameters<typeof onEdgesChange>[0]) => {
+      if (changes.some((c) => c.type === 'remove')) {
+        pushHistory();
+        touchTopology();
+      }
       onEdgesChange(changes);
-      if (changes.some((c) => c.type === 'remove')) touchTopology();
     },
-    [onEdgesChange, touchTopology],
+    [onEdgesChange, pushHistory, touchTopology],
   );
+  const undo = useCallback(() => {
+    const prev = pastRef.current.pop();
+    if (!prev) return;
+    futureRef.current.push({ nodes: JSON.parse(JSON.stringify(nodesRef.current)), edges: JSON.parse(JSON.stringify(edgesRef.current)) });
+    setNodes(prev.nodes);
+    setEdges(prev.edges);
+    setHistTick((v) => v + 1);
+    touchTopology();
+  }, [setNodes, setEdges, touchTopology]);
+
+  const redo = useCallback(() => {
+    const next = futureRef.current.pop();
+    if (!next) return;
+    pastRef.current.push({ nodes: JSON.parse(JSON.stringify(nodesRef.current)), edges: JSON.parse(JSON.stringify(edgesRef.current)) });
+    setNodes(next.nodes);
+    setEdges(next.edges);
+    setHistTick((v) => v + 1);
+    touchTopology();
+  }, [setNodes, setEdges, touchTopology]);
+
+  const duplicateSelected = useCallback(() => {
+    const sel = nodesRef.current.filter((n) => n.selected);
+    if (sel.length === 0) return;
+    pushHistory();
+    const idMap = new Map<string, string>();
+    sel.forEach((n) => idMap.set(n.id, `${n.id}-copy-${Date.now().toString(36)}-${idMap.size}`));
+    const clones: Node[] = sel.map((n) => {
+      const copy = JSON.parse(JSON.stringify(n)) as Node;
+      copy.id = idMap.get(n.id) as string;
+      copy.position = { x: n.position.x + 28, y: n.position.y + 28 };
+      copy.selected = true;
+      if (n.parentId && idMap.has(n.parentId)) copy.parentId = idMap.get(n.parentId);
+      return copy;
+    });
+    const selIds = new Set(sel.map((n) => n.id));
+    const edgeClones: Edge[] = edgesRef.current
+      .filter((e) => selIds.has(e.source) && selIds.has(e.target))
+      .map((e, i) => {
+        const copy = JSON.parse(JSON.stringify(e)) as Edge;
+        copy.id = `${e.id}-copy-${i}`;
+        copy.source = idMap.get(e.source) as string;
+        copy.target = idMap.get(e.target) as string;
+        copy.selected = false;
+        return copy;
+      });
+    setNodes((nds) => [...nds.map((n) => (n.selected ? { ...n, selected: false } : n)), ...clones]);
+    if (edgeClones.length > 0) setEdges((eds) => [...eds, ...edgeClones]);
+    if (sel.some((n) => n.type === 'design')) touchTopology();
+  }, [pushHistory, setNodes, setEdges, touchTopology]);
+
+  const deleteSelected = useCallback(() => {
+    const selN = nodesRef.current.filter((n) => n.selected);
+    const selE = edgesRef.current.filter((e) => e.selected);
+    if (selN.length === 0 && selE.length === 0) return;
+    pushHistory();
+    const dead = new Set(selN.map((n) => n.id));
+    const byId = new Map(nodesRef.current.map((n) => [n.id, n]));
+    setNodes((nds) =>
+      nds
+        .filter((n) => !dead.has(n.id))
+        .map((n) => {
+          if (n.parentId && dead.has(n.parentId)) {
+            const p = byId.get(n.parentId);
+            return { ...n, parentId: undefined, position: { x: n.position.x + (p?.position.x ?? 0), y: n.position.y + (p?.position.y ?? 0) } };
+          }
+          return n.selected ? { ...n, selected: false } : n;
+        }),
+    );
+    setEdges((eds) => eds.filter((e) => !dead.has(e.source) && !dead.has(e.target) && !e.selected));
+    if (selN.some((n) => n.type === 'design') || selE.length > 0) touchTopology();
+  }, [pushHistory, setNodes, setEdges, touchTopology]);
+
+  const clearCanvas = useCallback(() => {
+    if (nodesRef.current.length === 0 && edgesRef.current.length === 0) return;
+    pushHistory();
+    setNodes([]);
+    setEdges([]);
+    touchTopology();
+  }, [pushHistory, setNodes, setEdges, touchTopology]);
+
+  const resetCanvas = useCallback(() => {
+    pushHistory();
+    const fresh = initialStateFor(preset.id);
+    setNodes(toFlowNodes(fresh, direction));
+    setEdges(toFlowEdges(fresh));
+    try {
+      localStorage.removeItem(studioKey);
+    } catch {
+      // Non-fatal: starter canvas is already in memory.
+    }
+    touchTopology();
+  }, [pushHistory, preset.id, direction, setNodes, setEdges, touchTopology, studioKey]);
+
+  const groupIntoSection = useCallback(() => {
+    const sel = nodesRef.current.filter((n) => n.selected && n.type === 'design' && !n.parentId);
+    if (sel.length === 0) return;
+    pushHistory();
+    const W = 170;
+    const H = 110;
+    const minX = Math.min(...sel.map((n) => n.position.x));
+    const minY = Math.min(...sel.map((n) => n.position.y));
+    const maxX = Math.max(...sel.map((n) => n.position.x));
+    const maxY = Math.max(...sel.map((n) => n.position.y));
+    const pad = 28;
+    const head = 52;
+    const sx = minX - pad;
+    const sy = minY - head;
+    const section = makeSectionNode({ x: sx, y: sy }, maxX - minX + W + pad * 2, maxY - minY + H + head + pad);
+    section.selected = false;
+    (section.data as SectionNodeData).title = `${sel.length} components`;
+    const selIds = new Set(sel.map((n) => n.id));
+    setNodes((nds) => [
+      ...nds.map((n) =>
+        selIds.has(n.id)
+          ? { ...n, parentId: section.id, selected: true, position: { x: n.position.x - sx, y: n.position.y - sy } }
+          : n.selected
+            ? { ...n, selected: false }
+            : n,
+      ),
+      section,
+    ]);
+  }, [pushHistory, setNodes]);
+
+  const ungroupSelectedSections = useCallback(() => {
+    const secs = nodesRef.current.filter((n) => n.selected && n.type === 'section');
+    if (secs.length === 0) return;
+    pushHistory();
+    const dead = new Set(secs.map((s) => s.id));
+    const byId = new Map(nodesRef.current.map((n) => [n.id, n]));
+    setNodes((nds) =>
+      nds
+        .filter((n) => !dead.has(n.id))
+        .map((n) => {
+          if (n.parentId && dead.has(n.parentId)) {
+            const p = byId.get(n.parentId);
+            return { ...n, parentId: undefined, position: { x: n.position.x + (p?.position.x ?? 0), y: n.position.y + (p?.position.y ?? 0) } };
+          }
+          return n;
+        }),
+    );
+  }, [pushHistory, setNodes]);
+
+  const placeNode = useCallback(
+    (item: { tab: 'kind'; kind: DesignKind } | { tab: 'note' } | { tab: 'section' }, at?: { x: number; y: number }) => {
+      pushHistory();
+      const pos = at ?? layoutPos(nodesRef.current.length, direction);
+      const host = at ? sectionAt(nodesRef.current, at) : undefined;
+      const parentId = host?.id;
+      const rel = host ? { x: pos.x - host.position.x, y: pos.y - host.position.y } : pos;
+      const node =
+        item.tab === 'note' ? makeNoteNode(rel, parentId) : item.tab === 'section' ? makeSectionNode(rel) : makeDesignNode(item.kind, rel, direction, parentId);
+      setNodes((nds) => [...nds.map((n) => (n.selected ? { ...n, selected: false } : n)), node]);
+      if (item.tab === 'kind') touchTopology();
+    },
+    [pushHistory, direction, setNodes, touchTopology],
+  );
+
+  const onPaletteDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      const instance = reactFlowRef.current;
+      if (!instance) return;
+      const at = instance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+      const kind = e.dataTransfer.getData('application/x-design-kind') as DesignKind | '';
+      const annot = e.dataTransfer.getData('application/x-studio-annot');
+      if (kind && PALETTE_GROUPS.some((g) => g.items.includes(kind))) placeNode({ tab: 'kind', kind }, at);
+      else if (annot === 'note' || annot === 'section') placeNode({ tab: annot }, at);
+    },
+    [placeNode],
+  );
+
+  const onPaletteDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const onNodeDragStart = useCallback(() => {
+    dragSnapshotRef.current = { nodes: JSON.parse(JSON.stringify(nodesRef.current)), edges: JSON.parse(JSON.stringify(edgesRef.current)) };
+  }, []);
+
+  const onNodeDragStop = useCallback(() => {
+    const snap = dragSnapshotRef.current;
+    dragSnapshotRef.current = null;
+    if (snap) pushHistory(snap);
+  }, [pushHistory]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if (mod && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        redo();
+      } else if (mod && e.key.toLowerCase() === 'd') {
+        e.preventDefault();
+        duplicateSelected();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [undo, redo, duplicateSelected]);
+
+  const selectedNodes = useMemo(() => nodes.filter((n) => n.selected), [nodes]);
+  const selectedEdges = useMemo(() => edges.filter((e) => e.selected), [edges]);
+  const designCount = useMemo(() => nodes.filter((n) => n.type === 'design').length, [nodes]);
+  const noteCount = useMemo(() => nodes.filter((n) => n.type === 'note').length, [nodes]);
+  const sectionCount = useMemo(() => nodes.filter((n) => n.type === 'section').length, [nodes]);
 
   const toggleDirection = useCallback(() => {
     setDirection((prev) => {
@@ -635,7 +1140,7 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
 
   const addKind = useCallback(
     (kind: DesignKind) => {
-      const n = starterNode(kind, kind);
+      pushHistory();
       setNodes((nds) => {
         let position = layoutPos(nds.length, direction);
         const instance = reactFlowRef.current;
@@ -691,29 +1196,27 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
             position = layoutPos(nds.length, direction);
           }
         }
-        return [
-          ...nds.map((node) => (node.selected ? { ...node, selected: false } : node)),
-          {
-            id: n.id,
-            type: 'design',
-            position,
-            selected: true,
-            data: { kind, label: DESIGN_KIND_LABELS[kind], bottleneck: false, failed: false, queued: 0, direction } satisfies CanvasNodeData,
-          },
-        ];
+        const host = sectionAt(nds, position);
+        const node = host
+          ? makeDesignNode(kind, { x: position.x - host.position.x, y: position.y - host.position.y }, direction, host.id)
+          : makeDesignNode(kind, position, direction);
+        return [...nds.map((nd) => (nd.selected ? { ...nd, selected: false } : nd)), node];
       });
       touchTopology();
     },
-    [direction, setNodes, touchTopology],
+    [direction, pushHistory, setNodes, touchTopology],
   );
 
   const onConnect = useCallback(
     (c: Connection) => {
       if (!c.source || !c.target || c.source === c.target) return;
+      const byId = new Map(nodesRef.current.map((n) => [n.id, n]));
+      if (byId.get(c.source)?.type !== 'design' || byId.get(c.target)?.type !== 'design') return;
+      pushHistory();
       setEdges((eds) => addEdge({ ...c, type: 'flow', data: { flow: 0, failed: false, rps: 0 } satisfies FlowEdgeData, markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: '#71717a', strokeWidth: 2.5 } }, eds));
       touchTopology();
     },
-    [setEdges, touchTopology],
+    [pushHistory, setEdges, touchTopology],
   );
 
   const inspected = useMemo(
@@ -744,6 +1247,26 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
               {s.label}
             </button>
           ))}
+        </div>
+      )}
+      {layout === 'studio' && (
+        <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-zinc-200 bg-white px-4 py-1.5 dark:border-zinc-800 dark:bg-zinc-900" aria-label="Canvas tools">
+          <span className="mr-1 inline-flex items-center gap-1.5 text-[11px] text-zinc-500" title={savedAt ? `Autosaved at ${savedAt.toLocaleTimeString()}` : 'Changes autosave to this browser'}>
+            <span className={`h-1.5 w-1.5 rounded-full ${savedAt ? 'bg-emerald-500' : 'bg-zinc-400'}`} aria-hidden />
+            {savedAt ? `SAVED ${savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : 'UNSAVED'}
+          </span>
+          <span className="mx-1 h-4 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
+          <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)" className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800"><ResetIcon width={13} height={13} aria-hidden />Undo</button>
+          <button onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)" className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800"><ReloadIcon width={13} height={13} aria-hidden />Redo</button>
+          <span className="mx-1 h-4 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
+          <button onClick={duplicateSelected} disabled={selectedNodes.length === 0} title="Duplicate selection (Ctrl+D)" className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800"><CopyIcon width={13} height={13} aria-hidden />Duplicate</button>
+          <button onClick={deleteSelected} disabled={selectedNodes.length === 0 && selectedEdges.length === 0} title="Delete selection (Del)" className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-zinc-600 hover:bg-red-500/10 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:text-red-400"><TrashIcon width={13} height={13} aria-hidden />Delete</button>
+          <button onClick={groupIntoSection} disabled={!selectedNodes.some((n) => n.type === 'design' && !n.parentId)} title="Wrap selected components in a section frame" className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800"><GroupIcon width={13} height={13} aria-hidden />Group into section</button>
+          <span className="mx-1 h-4 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
+          <button onClick={clearCanvas} title="Remove everything from the canvas (undoable)" className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"><TrashIcon width={13} height={13} aria-hidden />Clear</button>
+          <button onClick={resetCanvas} title="Restore the scenario starter canvas" className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"><ResetIcon width={13} height={13} aria-hidden />Reset</button>
+          <span className="mx-1 h-4 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
+          <span className="font-mono text-[11px] text-zinc-500">{designCount} components · {edges.length} connections · {noteCount} notes · {sectionCount} sections</span>
         </div>
       )}
       <div className="shrink-0 border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
@@ -822,6 +1345,9 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
             <button onClick={onPause} className="inline-flex items-center gap-1.5 rounded bg-amber-500 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-400"><PauseIcon width={13} height={13} className="shrink-0" aria-hidden />{t(locale, 'pause')}</button>
           )}
           <button onClick={onStepOnce} title="Advance 0.2 simulated seconds" className="inline-flex items-center gap-1.5 rounded bg-zinc-100 px-2.5 py-1 text-xs text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"><TrackNextIcon width={13} height={13} className="shrink-0" aria-hidden />{t(locale, 'step')}</button>
+          <span className="mx-1 h-4 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
+          <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)" aria-label="Undo" className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-sky-500/60 hover:text-sky-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300"><ResetIcon width={13} height={13} className="shrink-0" aria-hidden />Undo</button>
+          <button onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)" aria-label="Redo" className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-sky-500/60 hover:text-sky-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300"><ReloadIcon width={13} height={13} className="shrink-0" aria-hidden />Redo</button>
           <div className="flex overflow-hidden rounded border border-zinc-200 dark:border-zinc-700" aria-label="Speed">
             {[1, 2, 4].map((s) => (
               <button key={s} onClick={() => setSpeed(s)} aria-pressed={speed === s} className={`px-2 py-1 font-mono text-xs transition ${speed === s ? 'bg-sky-600 text-white' : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}>{s}×</button>
@@ -836,6 +1362,7 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
           <button onClick={() => fireManual('heal', 'sql')} className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-emerald-500/60 hover:text-emerald-600 dark:border-zinc-700 dark:text-zinc-300"><CheckCircledIcon width={13} height={13} className="shrink-0" aria-hidden />Heal SQL</button>
           <button onClick={() => fireManual('heal', 'auth')} className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-emerald-500/60 hover:text-emerald-600 dark:border-zinc-700 dark:text-zinc-300"><CheckCircledIcon width={13} height={13} className="shrink-0" aria-hidden />Heal auth</button>
         </div>
+      {layout !== 'studio' && (
         <div className="mt-2 flex flex-wrap gap-1.5" aria-label={t(locale, 'addComponents')}>
           {preset.palette.map((kind) => (
             <button
@@ -847,10 +1374,129 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
               {DESIGN_KIND_LABELS[kind]}
             </button>
           ))}
+          <span className="mx-1 h-5 w-px self-center bg-zinc-200 dark:bg-zinc-700" aria-hidden />
+          <button
+            onClick={() => placeNode({ tab: 'note' })}
+            title="Add an annotation note (drag from sidebar in studio, or click to place)"
+            className="inline-flex items-center gap-1 rounded border border-dashed border-amber-500/60 bg-amber-500/10 px-2 py-1 text-xs text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"
+          >
+            <Pencil2Icon width={12} height={12} className="shrink-0" aria-hidden />
+            Note
+          </button>
+          <button
+            onClick={() => placeNode({ tab: 'section' })}
+            title="Add a section frame to group components"
+            className="inline-flex items-center gap-1 rounded border border-dashed border-sky-500/60 bg-sky-500/10 px-2 py-1 text-xs text-sky-700 hover:bg-sky-500/20 dark:text-sky-300"
+          >
+            <FrameIcon width={12} height={12} className="shrink-0" aria-hidden />
+            Section
+          </button>
         </div>
+      )}
       </div>
 
       <div className="flex min-h-0 flex-1">
+        {layout === 'studio' && (
+          <aside className="hidden w-52 shrink-0 flex-col overflow-y-auto border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 lg:flex" aria-label="Component library">
+            <div className="sticky top-0 border-b border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="flex items-center gap-1.5 rounded border border-zinc-200 px-2 py-1 dark:border-zinc-700">
+                <MagnifyingGlassIcon width={12} height={12} className="shrink-0 text-zinc-400" aria-hidden />
+                <input
+                  value={paletteQuery}
+                  onChange={(e) => setPaletteQuery(e.target.value)}
+                  placeholder="Search components…"
+                  aria-label="Search components"
+                  className="w-full bg-transparent text-xs text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100"
+                />
+              </div>
+              <p className="mt-1.5 px-1 text-[10px] leading-4 text-zinc-500">Drag onto the canvas, or click to place.</p>
+            </div>
+            {PALETTE_GROUPS.map((group) => {
+              const items = group.items.filter((k) => DESIGN_KIND_LABELS[k].toLowerCase().includes(paletteQuery.trim().toLowerCase()));
+              if (items.length === 0) return null;
+              return (
+                <div key={group.title} className="border-b border-zinc-100 px-2 py-2 dark:border-zinc-800/60">
+                  <div className="px-1 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{group.title}</div>
+                  {items.map((kind) => (
+                    <div
+                      key={kind}
+                      role="button"
+                      tabIndex={0}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('application/x-design-kind', kind);
+                        e.dataTransfer.effectAllowed = 'move';
+                      }}
+                      onClick={() => addKind(kind)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          addKind(kind);
+                        }
+                      }}
+                      title={`Add ${DESIGN_KIND_LABELS[kind]}`}
+                      className="group flex cursor-grab items-center gap-2 rounded px-1.5 py-1.5 text-xs text-zinc-700 hover:bg-zinc-100 active:cursor-grabbing dark:text-zinc-300 dark:hover:bg-zinc-800"
+                    >
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: KIND_ACCENT[kind] }} aria-hidden />
+                      <span className="flex-1 truncate">{DESIGN_KIND_LABELS[kind]}</span>
+                      <PlusIcon width={12} height={12} className="shrink-0 text-zinc-300 opacity-0 transition group-hover:opacity-100 dark:text-zinc-600" aria-hidden />
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+            <div className="px-2 py-2">
+              <div className="px-1 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Annotate</div>
+              <div
+                role="button"
+                tabIndex={0}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('application/x-studio-annot', 'note');
+                  e.dataTransfer.effectAllowed = 'move';
+                }}
+                onClick={() => placeNode({ tab: 'note' })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    placeNode({ tab: 'note' });
+                  }
+                }}
+                title="Sticky note — explain a decision inline"
+                className="group flex cursor-grab items-center gap-2 rounded px-1.5 py-1.5 text-xs text-zinc-700 hover:bg-zinc-100 active:cursor-grabbing dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                <Pencil2Icon width={13} height={13} className="shrink-0 text-amber-500" aria-hidden />
+                <span className="flex-1">Note</span>
+                <PlusIcon width={12} height={12} className="shrink-0 text-zinc-300 opacity-0 transition group-hover:opacity-100 dark:text-zinc-600" aria-hidden />
+              </div>
+              <div
+                role="button"
+                tabIndex={0}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('application/x-studio-annot', 'section');
+                  e.dataTransfer.effectAllowed = 'move';
+                }}
+                onClick={() => placeNode({ tab: 'section' })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    placeNode({ tab: 'section' });
+                  }
+                }}
+                title="Section frame — group components under a labeled area"
+                className="group flex cursor-grab items-center gap-2 rounded px-1.5 py-1.5 text-xs text-zinc-700 hover:bg-zinc-100 active:cursor-grabbing dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                <FrameIcon width={13} height={13} className="shrink-0 text-sky-500" aria-hidden />
+                <span className="flex-1">Section</span>
+                <PlusIcon width={12} height={12} className="shrink-0 text-zinc-300 opacity-0 transition group-hover:opacity-100 dark:text-zinc-600" aria-hidden />
+              </div>
+            </div>
+            <div className="mt-auto px-3 py-2 text-[10px] leading-4 text-zinc-400">
+              Ctrl+Z undo · Ctrl+D duplicate · Del delete · Shift+drag selects
+            </div>
+          </aside>
+        )}
         <ResizableSplit
           storageKey="backend-roadmap:split:design-inner"
           defaultPct={layout === 'studio' ? 62 : 55}
@@ -867,18 +1513,34 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
                 onInit={(instance) => {
                   reactFlowRef.current = instance;
                 }}
+                onDrop={onPaletteDrop}
+                onDragOver={onPaletteDragOver}
+                onNodeDragStart={onNodeDragStart}
+                onNodeDragStop={onNodeDragStop}
+                onMove={(_e, viewport) => setZoom((z) => (Math.abs(z - viewport.zoom) < 0.005 ? z : viewport.zoom))}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
                 fitView
                 fitViewOptions={{ padding: 0.2 }}
-                minZoom={0.3}
-                maxZoom={1.5}
+                minZoom={0.2}
+                maxZoom={2}
                 colorMode={theme === 'dark' ? 'dark' : 'light'}
                 proOptions={{ hideAttribution: false }}
                 deleteKeyCode={['Backspace', 'Delete']}
+                panOnScroll
+                selectionOnDrag
+                panOnDrag={[1, 2]}
               >
                 <Background variant={BackgroundVariant.Dots} gap={24} size={1} color={theme === 'dark' ? '#27272a' : '#e4e4e7'} />
                 <Controls />
+                {showMap && (
+                  <MiniMap
+                    pannable
+                    zoomable
+                    className="!border !border-zinc-200 !bg-white/90 dark:!border-zinc-700 dark:!bg-zinc-900/90"
+                    maskColor={theme === 'dark' ? 'rgba(9, 9, 11, 0.7)' : 'rgba(244, 244, 245, 0.7)'}
+                  />
+                )}
               </ReactFlow>
               {phase === 'idle' && (
                 <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded bg-zinc-900/85 px-3 py-1.5 text-xs text-zinc-200 dark:bg-zinc-100/90 dark:text-zinc-900">
@@ -889,6 +1551,119 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
           }
           right={
             <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-3">
+              {(selectedNodes.length > 0 || selectedEdges.length > 0) && (
+                <div className="rounded-lg border border-sky-500/40 bg-white p-3 dark:border-sky-500/30 dark:bg-zinc-900" aria-label="Selection inspector">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                      {selectedNodes.length > 1
+                        ? `${selectedNodes.length} selected`
+                        : selectedNodes.length === 1
+                          ? selectedNodes[0].type === 'note'
+                            ? 'Note'
+                            : selectedNodes[0].type === 'section'
+                              ? 'Section'
+                              : DESIGN_KIND_LABELS[(selectedNodes[0].data as unknown as CanvasNodeData).kind] ?? 'Component'
+                          : `${selectedEdges.length} connection${selectedEdges.length === 1 ? '' : 's'}`}
+                    </span>
+                    <button onClick={deleteSelected} title="Delete selection (Del)" className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-zinc-500 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400">
+                      <TrashIcon width={12} height={12} aria-hidden />Delete
+                    </button>
+                  </div>
+                  {selectedNodes.length === 1 && selectedNodes[0].type === 'design' && (
+                    <label className="mt-2 block text-xs text-zinc-600 dark:text-zinc-300">
+                      Label
+                      <input
+                        value={(selectedNodes[0].data as unknown as CanvasNodeData).label}
+                        onFocus={() => studioEditBridge.begin?.()}
+                        onBlur={() => studioEditBridge.end?.()}
+                        onChange={(e) => {
+                          const label = e.target.value;
+                          const id = selectedNodes[0].id;
+                          setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, label } } : n)));
+                        }}
+                        className="mt-1 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-800"
+                      />
+                    </label>
+                  )}
+                  {selectedNodes.length === 1 && selectedNodes[0].type === 'note' && (
+                    <div className="mt-2">
+                      <div className="flex gap-1.5" aria-label="Note color">
+                        {NOTE_COLORS.map((c) => (
+                          <button
+                            key={c}
+                            onClick={() => {
+                              studioEditBridge.begin?.();
+                              const id = selectedNodes[0].id;
+                              setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, color: c } } : n)));
+                              studioEditBridge.end?.();
+                            }}
+                            title={c}
+                            aria-label={`Note color ${c}`}
+                            className={`h-5 w-5 rounded-full ring-offset-1 ${(selectedNodes[0].data as unknown as NoteNodeData).color === c ? 'ring-2 ring-sky-500' : 'ring-1 ring-black/20'}`}
+                            style={{ background: c }}
+                          />
+                        ))}
+                      </div>
+                      <textarea
+                        value={(selectedNodes[0].data as unknown as NoteNodeData).text}
+                        rows={3}
+                        onFocus={() => studioEditBridge.begin?.()}
+                        onBlur={() => studioEditBridge.end?.()}
+                        onChange={(e) => {
+                          const text = e.target.value;
+                          const id = selectedNodes[0].id;
+                          setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, text } } : n)));
+                        }}
+                        placeholder="Write an annotation…"
+                        aria-label="Note text"
+                        className="mt-2 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-800"
+                      />
+                    </div>
+                  )}
+                  {selectedNodes.length === 1 && selectedNodes[0].type === 'section' && (
+                    <div className="mt-2">
+                      <label className="block text-xs text-zinc-600 dark:text-zinc-300">
+                        Title
+                        <input
+                          value={(selectedNodes[0].data as unknown as SectionNodeData).title}
+                          onFocus={() => studioEditBridge.begin?.()}
+                          onBlur={() => studioEditBridge.end?.()}
+                          onChange={(e) => {
+                            const title = e.target.value;
+                            const id = selectedNodes[0].id;
+                            setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, title } } : n)));
+                          }}
+                          className="mt-1 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-800"
+                        />
+                      </label>
+                      <div className="mt-2 flex gap-1.5" aria-label="Section color">
+                        {(Object.keys(SECTION_STYLES) as SectionColor[]).map((c) => (
+                          <button
+                            key={c}
+                            onClick={() => {
+                              studioEditBridge.begin?.();
+                              const id = selectedNodes[0].id;
+                              setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, color: c } } : n)));
+                              studioEditBridge.end?.();
+                            }}
+                            title={c}
+                            aria-label={`Section color ${c}`}
+                            className={`h-5 w-8 rounded ring-offset-1 ${(selectedNodes[0].data as unknown as SectionNodeData).color === c ? 'ring-2 ring-sky-500' : 'ring-1 ring-black/20'} ${SECTION_STYLES[c].chip}`}
+                          />
+                        ))}
+                      </div>
+                      <button onClick={ungroupSelectedSections} className="mt-2 inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-sky-500/60 hover:text-sky-600 dark:border-zinc-700 dark:text-zinc-300">
+                        Ungroup section
+                      </button>
+                    </div>
+                  )}
+                  {selectedNodes.length > 1 && (
+                    <button onClick={groupIntoSection} className="mt-2 inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:border-sky-500/60 hover:text-sky-600 dark:border-zinc-700 dark:text-zinc-300">
+                      <GroupIcon width={12} height={12} aria-hidden />Group into section
+                    </button>
+                  )}
+                </div>
+              )}
               <div className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
                 <div className="flex items-baseline justify-between">
                   <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Live metrics</span>
@@ -945,6 +1720,47 @@ function SimulationStageContent({ skillId, scenarioId, layout }: SimulationStage
           }
         />
       </div>
+      {layout === 'studio' && (
+        <div className="flex shrink-0 items-center gap-3 border-t border-zinc-200 bg-white px-4 py-1.5 text-[11px] text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400" aria-label="Canvas status">
+          <span className="hidden font-mono xl:inline">SCROLL TO PAN · CTRL+SCROLL TO ZOOM · SHIFT+DRAG TO SELECT</span>
+          <span className="font-mono">{designCount} COMPONENTS · {edges.length} CONNECTIONS</span>
+          <span className="ml-auto inline-flex items-center gap-1">
+            <button
+              onClick={() => setShowMap((v) => !v)}
+              aria-pressed={showMap}
+              title="Toggle minimap"
+              className={`rounded px-1.5 py-0.5 font-mono ${showMap ? 'bg-sky-600 text-white' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+            >
+              MAP
+            </button>
+            <button
+              onClick={() => reactFlowRef.current?.zoomOut()}
+              title="Zoom out"
+              aria-label="Zoom out"
+              className="rounded px-1.5 py-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              <MinusIcon width={12} height={12} aria-hidden />
+            </button>
+            <span className="min-w-10 text-center font-mono">{Math.round(zoom * 100)}%</span>
+            <button
+              onClick={() => reactFlowRef.current?.zoomIn()}
+              title="Zoom in"
+              aria-label="Zoom in"
+              className="rounded px-1.5 py-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              <PlusIcon width={12} height={12} aria-hidden />
+            </button>
+            <button
+              onClick={() => reactFlowRef.current?.fitView({ padding: 0.2 })}
+              title="Fit canvas to view"
+              aria-label="Fit canvas to view"
+              className="rounded px-1.5 py-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              <EnterFullScreenIcon width={12} height={12} aria-hidden />
+            </button>
+          </span>
+        </div>
+      )}
 
       {showHints && (
         <div className="max-h-[40vh] overflow-auto border-t border-zinc-200 bg-white px-4 py-3 text-xs leading-5 text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
